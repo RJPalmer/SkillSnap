@@ -1,0 +1,35 @@
+@page "/project-list"
+@using SkillSnap_API.models
+@inject HttpClient Http
+
+<h3>Project List</h3>
+
+@if (projects == null)
+{
+    <p>Loading projects...</p>
+}
+else
+{
+    <ul>
+        @foreach (var project in projects)
+        {
+            <li>@project.Name</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Project>? projects;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            projects = await Http.GetFromJsonAsync<List<Project>>("api/user/projects");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading projects: {ex.Message}");
+        }
+    }
+}
