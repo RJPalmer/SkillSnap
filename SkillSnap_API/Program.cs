@@ -2,8 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
 
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<SkillSnapDBContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SkillSnapDBContext") ?? throw new InvalidOperationException("Connection string 'SkillSnapDBContext' not found.")));
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
