@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
 
 using Microsoft.Extensions.Options;
 

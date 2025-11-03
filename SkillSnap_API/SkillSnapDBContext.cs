@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
 
 public class SkillSnapDbContext : DbContext
 {

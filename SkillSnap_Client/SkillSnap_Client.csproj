@@ -7,13 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Removed server-only/incorrect package references that caused a runtime pack lookup for
+         Microsoft.AspNetCore.App when building for browser-wasm. Keep only Blazor WebAssembly
+         packages here. If you need shared models, create a separate shared class library
+         (e.g., SkillSnap.Shared) and reference that from both projects. -->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="9.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.7" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="9.0.7" />
+  <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="9.0.7" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../SkillSnap_API/SkillSnap_API.csproj" />
-  </ItemGroup>
+  <!-- If the client needs shared DTOs/models, add a shared class library project and reference it
+       here instead of referencing the server project directly. -->
+
+    <ItemGroup>
+      <ProjectReference Include="..\SkillSnap_Shared\SkillSnap_Shared.csproj" />
+    </ItemGroup>
 
 </Project>
