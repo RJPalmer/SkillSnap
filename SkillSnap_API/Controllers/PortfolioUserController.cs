@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
+using SkillSnap_API.Data;
 
 namespace SkillSnap_API.Controllers
 {
@@ -13,150 +9,113 @@ namespace SkillSnap_API.Controllers
     [ApiController]
     public class PortfolioUserController : Controller
     {
-        private readonly SkillSnapDBContext _context;
+        private readonly SkillSnapDbContext _context;
 
-        public PortfolioUserController(SkillSnapDBContext context)
+        public PortfolioUserController(SkillSnapDbContext context)
         {
             _context = context;
         }
 
-        // GET: PortfolioUser
+        // GET: api/PortfolioUser
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<ActionResult<IEnumerable<PortfolioUser>>> Index()
         {
-            return View(await _context.PortfolioUser.ToListAsync());
+            return await _context.PortfolioUsers.Include(p => p.Projects)
+                                              .Include(p => p.Skills)
+                                              .ToListAsync();
         }
 
         // GET: PortfolioUser/Details/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Details(int? id)
+        public async Task<ActionResult<PortfolioUser>> Details(int? id)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var portfolioUser = await _context.PortfolioUser
+            var portfolioUser = await _context.PortfolioUsers
+                .Include(p => p.Projects)
+                .Include(p => p.Skills)
                 .FirstOrDefaultAsync(m => m.Id == id);
+                
             if (portfolioUser == null)
             {
                 return NotFound();
             }
 
-            return View(portfolioUser);
+            return Ok(portfolioUser);
         }
 
         // GET: PortfolioUser/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: PortfolioUser/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: api/PortfolioUser
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Bio,ProfileImageUrl")] PortfolioUser portfolioUser)
+        public async Task<ActionResult<PortfolioUser>> Create(PortfolioUser portfolioUser)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                _context.Add(portfolioUser);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return BadRequest(ModelState);
             }
-            return View(portfolioUser);
+
+            _context.PortfolioUsers.Add(portfolioUser);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Details), new { id = portfolioUser.Id }, portfolioUser);
         }
 
-        // GET: PortfolioUser/Edit/5
-        [HttpGet("Edit/{id}")]
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var portfolioUser = await _context.PortfolioUser.FindAsync(id);
-            if (portfolioUser == null)
-            {
-                return NotFound();
-            }
-            return View(portfolioUser);
-        }
-
-        // POST: PortfolioUser/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Bio,ProfileImageUrl")] PortfolioUser portfolioUser)
+        // PUT: api/PortfolioUser/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Edit(int id, PortfolioUser portfolioUser)
         {
             if (id != portfolioUser.Id)
             {
-                return NotFound();
+                return BadRequest();
             }
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(portfolioUser);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!PortfolioUserExists(portfolioUser.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                return BadRequest(ModelState);
             }
-            return View(portfolioUser);
+
+            try
+            {
+                _context.Update(portfolioUser);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!PortfolioUserExists(portfolioUser.Id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
-        // GET: PortfolioUser/Delete/5
-        [HttpGet("Delete/{id}")]
-        public async Task<IActionResult> Delete(int? id)
+        // DELETE: api/PortfolioUser/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var portfolioUser = await _context.PortfolioUser
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var portfolioUser = await _context.PortfolioUsers.FindAsync(id);
             if (portfolioUser == null)
             {
                 return NotFound();
             }
 
-            return View(portfolioUser);
-        }
-
-        // POST: PortfolioUser/Delete/5
-        [HttpPost, ActionName("Delete"), Route("Delete/{id}")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var portfolioUser = await _context.PortfolioUser.FindAsync(id);
-            if (portfolioUser != null)
-            {
-                _context.PortfolioUser.Remove(portfolioUser);
-            }
-
+            _context.PortfolioUsers.Remove(portfolioUser);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return NoContent();
         }
 
         private bool PortfolioUserExists(int id)
         {
-            return _context.PortfolioUser.Any(e => e.Id == id);
+            return _context.PortfolioUsers.Any(e => e.Id == id);
         }
     }
 }
