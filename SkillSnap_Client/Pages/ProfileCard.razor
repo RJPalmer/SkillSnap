@@ -1,5 +1,6 @@
 @page "/profile-card"
 @using SkillSnap.Shared.Models
+@using SkillSnap.Shared.DTOs
 @using SkillSnap_Client.Services
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @inject ISkillSnapApiClient ApiClient
@@ -14,14 +15,14 @@
 else
 {
     <div class="profile-card">
-        <img src="@userProfile.ProfilePictureUrl" alt="Profile picture of @userProfile.Name" class="profile-picture" />
+        <img src="@userProfile.ProfileImageUrl" alt="Profile picture of @userProfile.Name" class="profile-picture" />
         <h2>@userProfile.Name</h2>
         <p>@userProfile.Bio</p>
     </div>
 }
 
 @code {
-    private PortfolioUser? userProfile;
+    private PortfolioUserDto? userProfile;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()

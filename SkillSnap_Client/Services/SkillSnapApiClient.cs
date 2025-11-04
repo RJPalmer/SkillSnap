@@ -1,14 +1,15 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using SkillSnap.Shared.DTOs;
 using SkillSnap.Shared.Models;
 
 namespace SkillSnap_Client.Services;
 
 public interface ISkillSnapApiClient
 {
-    Task<PortfolioUser?> GetUserProfileAsync();
-    Task<IEnumerable<Project>> GetUserProjectsAsync();
-    Task<IEnumerable<Skill>> GetUserSkillsAsync();
+    Task<PortfolioUserDto?> GetUserProfileAsync();
+    Task<IEnumerable<ProjectDto>> GetUserProjectsAsync();
+    Task<IEnumerable<SkillDto>> GetUserSkillsAsync();
 }
 
 public class SkillSnapApiClient : ISkillSnapApiClient
@@ -16,17 +17,26 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<SkillSnapApiClient> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SkillSnapApiClient"/> class.
+    /// </summary>
+    /// <param name="httpClient"></param>
+    /// <param name="logger"></param>
     public SkillSnapApiClient(HttpClient httpClient, ILogger<SkillSnapApiClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
     }
 
-    public async Task<PortfolioUser?> GetUserProfileAsync()
+    /// <summary>
+    /// Gets the user profile.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<PortfolioUserDto?> GetUserProfileAsync()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<PortfolioUser>("api/user/profile");
+            return await _httpClient.GetFromJsonAsync<PortfolioUserDto>("api/user/profile");
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -41,18 +51,22 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         }
     }
 
-    public async Task<IEnumerable<Project>> GetUserProjectsAsync()
+    /// <summary>
+    /// Gets the user projects.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<IEnumerable<ProjectDto>> GetUserProjectsAsync()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<Project>>("api/user/projects") 
-                   ?? Array.Empty<Project>();
+            return await _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/user/projects")
+                   ?? Array.Empty<ProjectDto>();
         }
         catch (AccessTokenNotAvailableException exception)
         {
             _logger.LogWarning("Token not available, redirecting to login");
             exception.Redirect();
-            return Array.Empty<Project>();
+            return Array.Empty<ProjectDto>();
         }
         catch (Exception ex)
         {
@@ -61,18 +75,22 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         }
     }
 
-    public async Task<IEnumerable<Skill>> GetUserSkillsAsync()
+    /// <summary>
+    /// Gets the user skills.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<IEnumerable<SkillDto>> GetUserSkillsAsync()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<Skill>>("api/user/skills") 
-                   ?? Array.Empty<Skill>();
+            return await _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/user/skills")
+                   ?? Array.Empty<SkillDto>();
         }
         catch (AccessTokenNotAvailableException exception)
         {
             _logger.LogWarning("Token not available, redirecting to login");
             exception.Redirect();
-            return Array.Empty<Skill>();
+            return Array.Empty<SkillDto>();
         }
         catch (Exception ex)
         {

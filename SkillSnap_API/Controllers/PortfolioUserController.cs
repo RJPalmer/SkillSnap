@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
+using SkillSnap.Shared.DTOs;
 using SkillSnap_API.Data;
 
 namespace SkillSnap_API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PortfolioUserController : Controller
+    public class PortfolioUserController : ControllerBase
     {
         private readonly SkillSnapDbContext _context;
 
@@ -18,80 +19,172 @@ namespace SkillSnap_API.Controllers
 
         // GET: api/PortfolioUser
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PortfolioUser>>> Index()
+        public async Task<ActionResult<IEnumerable<PortfolioUserDto>>> GetAll()
         {
-            return await _context.PortfolioUsers.Include(p => p.Projects)
-                                              .Include(p => p.Skills)
-                                              .ToListAsync();
-        }
-
-        // GET: PortfolioUser/Details/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<PortfolioUser>> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var portfolioUser = await _context.PortfolioUsers
+            var users = await _context.PortfolioUsers
                 .Include(p => p.Projects)
                 .Include(p => p.Skills)
-                .FirstOrDefaultAsync(m => m.Id == id);
-                
-            if (portfolioUser == null)
-            {
-                return NotFound();
-            }
+                .ToListAsync();
 
-            return Ok(portfolioUser);
+            var dtos = users.Select(u => new PortfolioUserDto
+            {
+                Id = u.Id,
+                Name = u.Name,
+                Bio = u.Bio,
+                ProfileImageUrl = u.ProfileImageUrl,
+                Projects = u.Projects.Select(p => new ProjectDto {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PortfolioUserId = p.PortfolioUserId
+                }).ToList(),
+                Skills = u.Skills.Select(s => new SkillDto {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Level = s.Level,
+                    PortfolioUserId = s.PortfolioUserId
+                }).ToList()
+            });
+
+            return Ok(dtos);
         }
 
-        // GET: PortfolioUser/Create
+        // GET: api/PortfolioUser/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PortfolioUserDto>> GetById(int id)
+        {
+            var user = await _context.PortfolioUsers
+                .Include(p => p.Projects)
+                .Include(p => p.Skills)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            var dto = new PortfolioUserDto
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Bio = user.Bio,
+                ProfileImageUrl = user.ProfileImageUrl,
+                Projects = user.Projects.Select(p => new ProjectDto {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PortfolioUserId = p.PortfolioUserId
+                }).ToList(),
+                Skills = user.Skills.Select(s => new SkillDto {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Level = s.Level,
+                    PortfolioUserId = s.PortfolioUserId
+                }).ToList()
+            };
+
+            return Ok(dto);
+        }
+
         // POST: api/PortfolioUser
         [HttpPost]
-        public async Task<ActionResult<PortfolioUser>> Create(PortfolioUser portfolioUser)
+        public async Task<ActionResult<PortfolioUserDto>> Create(PortfolioUserCreateDto input)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
-            _context.PortfolioUsers.Add(portfolioUser);
+            var user = new PortfolioUser
+            {
+                Name = input.Name,
+                Bio = input.Bio,
+                ProfileImageUrl = input.ProfileImageUrl,
+                Projects = input.Projects.Select(p => new Project {
+                    Title = p.Title,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PortfolioUserId = p.PortfolioUserId
+                }).ToList(),
+                Skills = input.Skills.Select(s => new Skill {
+                    Name = s.Name,
+                    Level = s.Level,
+                    PortfolioUserId = s.PortfolioUserId
+                }).ToList()
+            };
+
+            _context.PortfolioUsers.Add(user);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Details), new { id = portfolioUser.Id }, portfolioUser);
+            var dto = new PortfolioUserDto
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Bio = user.Bio,
+                ProfileImageUrl = user.ProfileImageUrl,
+                Projects = user.Projects.Select(p => new ProjectDto {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PortfolioUserId = p.PortfolioUserId
+                }).ToList(),
+                Skills = user.Skills.Select(s => new SkillDto {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Level = s.Level,
+                    PortfolioUserId = s.PortfolioUserId
+                }).ToList()
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
         // PUT: api/PortfolioUser/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Edit(int id, PortfolioUser portfolioUser)
+        public async Task<IActionResult> Update(int id, PortfolioUserCreateDto input)
         {
-            if (id != portfolioUser.Id)
-            {
-                return BadRequest();
-            }
-
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
+
+            var user = await _context.PortfolioUsers
+                .Include(p => p.Projects)
+                .Include(p => p.Skills)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            // Update fields
+            user.Name = input.Name;
+            user.Bio = input.Bio;
+            user.ProfileImageUrl = input.ProfileImageUrl;
+
+            // Replace projects & skills (simple approach)
+            _context.Projects.RemoveRange(user.Projects);
+            _context.Skills.RemoveRange(user.Skills);
+
+            user.Projects = input.Projects.Select(p => new Project {
+                Title = p.Title,
+                Description = p.Description,
+                ImageUrl = p.ImageUrl,
+                PortfolioUserId = id
+            }).ToList();
+
+            user.Skills = input.Skills.Select(s => new Skill {
+                Name = s.Name,
+                Level = s.Level,
+                PortfolioUserId = id
+            }).ToList();
 
             try
             {
-                _context.Update(portfolioUser);
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!PortfolioUserExists(portfolioUser.Id))
-                {
+                if (!PortfolioUserExists(id))
                     return NotFound();
-                }
                 else
-                {
                     throw;
-                }
             }
 
             return NoContent();
@@ -99,15 +192,13 @@ namespace SkillSnap_API.Controllers
 
         // DELETE: api/PortfolioUser/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var portfolioUser = await _context.PortfolioUsers.FindAsync(id);
-            if (portfolioUser == null)
-            {
+            var user = await _context.PortfolioUsers.FindAsync(id);
+            if (user == null)
                 return NotFound();
-            }
 
-            _context.PortfolioUsers.Remove(portfolioUser);
+            _context.PortfolioUsers.Remove(user);
             await _context.SaveChangesAsync();
 
             return NoContent();

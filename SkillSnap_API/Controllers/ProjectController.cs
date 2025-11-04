@@ -1,156 +1,141 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
+using SkillSnap.Shared.DTOs;
+using SkillSnap_API.Data;
 
 namespace SkillSnap_API.Controllers
 {
-    public class ProjectController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProjectController : ControllerBase
     {
-        private readonly SkillSnapDBContext _context;
+        private readonly SkillSnapDbContext _context;
 
-        public ProjectController(SkillSnapDBContext context)
+        public ProjectController(SkillSnapDbContext context)
         {
             _context = context;
         }
 
-        // GET: Project
-        public async Task<IActionResult> Index()
+        // GET: api/Project
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAll()
         {
-            return View(await _context.Project.ToListAsync());
+            var projects = await _context.Projects.ToListAsync();
+            var dtos = projects.Select(p => new ProjectDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description,
+                ImageUrl = p.ImageUrl,
+                PortfolioUserId = p.PortfolioUserId
+            });
+            return Ok(dtos);
         }
 
-        // GET: Project/Details/5
-        public async Task<IActionResult> Details(int? id)
+        // GET: api/Project/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ProjectDto>> GetById(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var project = await _context.Project
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
                 return NotFound();
             }
 
-            return View(project);
+            var dto = new ProjectDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description,
+                ImageUrl = project.ImageUrl,
+                PortfolioUserId = project.PortfolioUserId
+            };
+
+            return Ok(dto);
         }
 
-        // GET: Project/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Project/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: api/Project
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,Description,ImageUrl,PortfolioUserId")] Project project)
+        public async Task<ActionResult<ProjectDto>> Create(ProjectCreateDto input)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var project = new Project
             {
-                _context.Add(project);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(project);
-        }
+                Title = input.Title,
+                Description = input.Description,
+                ImageUrl = input.ImageUrl,
+                PortfolioUserId = input.PortfolioUserId
+            };
 
-        // GET: Project/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var project = await _context.Project.FindAsync(id);
-            if (project == null)
-            {
-                return NotFound();
-            }
-            return View(project);
-        }
-
-        // POST: Project/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,ImageUrl,PortfolioUserId")] Project project)
-        {
-            if (id != project.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(project);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ProjectExists(project.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(project);
-        }
-
-        // GET: Project/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var project = await _context.Project
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (project == null)
-            {
-                return NotFound();
-            }
-
-            return View(project);
-        }
-
-        // POST: Project/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var project = await _context.Project.FindAsync(id);
-            if (project != null)
-            {
-                _context.Project.Remove(project);
-            }
-
+            _context.Projects.Add(project);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            var dto = new ProjectDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description,
+                ImageUrl = project.ImageUrl,
+                PortfolioUserId = project.PortfolioUserId
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+        }
+
+        // PUT: api/Project/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, ProjectCreateDto input)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return NotFound();
+
+            project.Title = input.Title;
+            project.Description = input.Description;
+            project.ImageUrl = input.ImageUrl;
+            project.PortfolioUserId = input.PortfolioUserId;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProjectExists(id))
+                    return NotFound();
+                else
+                    throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Project/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return NotFound();
+
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
 
         private bool ProjectExists(int id)
         {
-            return _context.Project.Any(e => e.Id == id);
+            return _context.Projects.Any(e => e.Id == id);
         }
     }
 }

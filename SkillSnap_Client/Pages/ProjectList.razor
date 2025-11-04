@@ -1,5 +1,5 @@
 @page "/project-list"
-@using SkillSnap.Shared.Models
+@using SkillSnap.Shared.DTOs
 @inject HttpClient Http
 
 <h3>Project List</h3>
@@ -13,19 +13,19 @@ else
     <ul>
         @foreach (var project in projects)
         {
-            <li>@project.Name</li>
+            <li>@project.Title</li>
         }
     </ul>
 }
 
 @code {
-    private List<Project>? projects;
+    private List<ProjectDto>? projects;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            projects = await Http.GetFromJsonAsync<List<Project>>("api/user/projects");
+            projects = (await Http.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/user/projects"))?.ToList();
         }
         catch (Exception ex)
         {

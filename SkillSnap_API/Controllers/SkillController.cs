@@ -1,156 +1,129 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
+using SkillSnap.Shared.DTOs;
+using SkillSnap_API.Data;
 
 namespace SkillSnap_API.Controllers
 {
-    public class SkillController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    public class SkillController : ControllerBase
     {
-        private readonly SkillSnapDBContext _context;
+        private readonly SkillSnapDbContext _context;
 
-        public SkillController(SkillSnapDBContext context)
+        public SkillController(SkillSnapDbContext context)
         {
             _context = context;
         }
 
-        // GET: Skill
-        public async Task<IActionResult> Index()
+        // GET: api/Skill
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<SkillDto>>> GetAll()
         {
-            return View(await _context.Skill.ToListAsync());
+            var skills = await _context.Skills.ToListAsync();
+            var dtos = skills.Select(s => new SkillDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Level = s.Level,
+                PortfolioUserId = s.PortfolioUserId
+            });
+            return Ok(dtos);
         }
 
-        // GET: Skill/Details/5
-        public async Task<IActionResult> Details(int? id)
+        // GET: api/Skill/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<SkillDto>> GetById(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var skill = await _context.Skill
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var skill = await _context.Skills.FindAsync(id);
             if (skill == null)
-            {
                 return NotFound();
-            }
 
-            return View(skill);
+            var dto = new SkillDto
+            {
+                Id = skill.Id,
+                Name = skill.Name,
+                Level = skill.Level,
+                PortfolioUserId = skill.PortfolioUserId
+            };
+
+            return Ok(dto);
         }
 
-        // GET: Skill/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Skill/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: api/Skill
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Level,PortfolioUserId")] Skill skill)
+        public async Task<ActionResult<SkillDto>> Create(SkillCreateDto input)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var skill = new Skill
             {
-                _context.Add(skill);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(skill);
-        }
+                Name = input.Name,
+                Level = input.Level,
+                PortfolioUserId = input.PortfolioUserId
+            };
 
-        // GET: Skill/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var skill = await _context.Skill.FindAsync(id);
-            if (skill == null)
-            {
-                return NotFound();
-            }
-            return View(skill);
-        }
-
-        // POST: Skill/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Level,PortfolioUserId")] Skill skill)
-        {
-            if (id != skill.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(skill);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!SkillExists(skill.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(skill);
-        }
-
-        // GET: Skill/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var skill = await _context.Skill
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (skill == null)
-            {
-                return NotFound();
-            }
-
-            return View(skill);
-        }
-
-        // POST: Skill/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var skill = await _context.Skill.FindAsync(id);
-            if (skill != null)
-            {
-                _context.Skill.Remove(skill);
-            }
-
+            _context.Skills.Add(skill);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            var dto = new SkillDto
+            {
+                Id = skill.Id,
+                Name = skill.Name,
+                Level = skill.Level,
+                PortfolioUserId = skill.PortfolioUserId
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
-        private bool SkillExists(int id)
+        // PUT: api/Skill/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, SkillCreateDto input)
         {
-            return _context.Skill.Any(e => e.Id == id);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var skill = await _context.Skills.FindAsync(id);
+            if (skill == null)
+                return NotFound();
+
+            skill.Name = input.Name;
+            skill.Level = input.Level;
+            skill.PortfolioUserId = input.PortfolioUserId;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Skills.Any(e => e.Id == id))
+                    return NotFound();
+                else
+                    throw;
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Skill/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var skill = await _context.Skills.FindAsync(id);
+            if (skill == null)
+                return NotFound();
+
+            _context.Skills.Remove(skill);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }
