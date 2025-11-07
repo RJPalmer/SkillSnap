@@ -6,6 +6,14 @@ using SkillSnap_API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(7271, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+    options.ListenLocalhost(5169);
+}); 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -15,7 +23,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:5001") // Update with your Blazor client URL
+        policy.WithOrigins("https://localhost:7053") // Update with your Blazor client URL
               .AllowAnyMethod()
               .AllowAnyHeader();
     });

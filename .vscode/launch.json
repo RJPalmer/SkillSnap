@@ -1,42 +1,48 @@
 {
-    // Launch configurations to start both API and Blazor client together.
-    // Use the compound "Launch API and Client" to start both.
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Launch SkillSnap_API",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/SkillSnap_API/bin/Debug/net9.0/SkillSnap_API.dll",
-            "cwd": "${workspaceFolder}/SkillSnap_API",
-            "stopAtEntry": false,
-            "console": "integratedTerminal",
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        },
-        {
-            "name": "Launch SkillSnap_Client",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/SkillSnap_Client/bin/Debug/net9.0/SkillSnap_Client.dll",
-            "cwd": "${workspaceFolder}/SkillSnap_Client",
-            "stopAtEntry": false,
-            "console": "integratedTerminal",
-            "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        }
-    ],
-    "compounds": [
-        {
-            "name": "Launch API and Client",
-            "configurations": [
-                "Launch SkillSnap_API",
-                "Launch SkillSnap_Client"
-            ]
-        }
-    ]
+  // Launch configurations to start both API and Blazor client together.
+  // Use the compound "Launch API and Client" to start both.
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "name": "Launch SkillSnap_API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "dotnet",
+      "args": ["run"],
+      "cwd": "${workspaceFolder}/SkillSnap_API",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_WATCH": "false",
+        "HTTPS_PORT": "7271"
+      }
+    },
+    {
+      "name": "Launch SkillSnap_Client",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-client",
+      "program": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/SkillSnap_Client/SkillSnap_Client.csproj"],
+      "cwd": "${workspaceFolder}/SkillSnap_Client",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://localhost:70\\d+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_WATCH": "false"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch API and Client",
+      "configurations": ["Launch SkillSnap_API", "Launch SkillSnap_Client"]
+    }
+  ]
 }
