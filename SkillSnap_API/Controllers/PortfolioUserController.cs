@@ -68,14 +68,16 @@ namespace SkillSnap_API.Controllers
                 Name = user.Name,
                 Bio = user.Bio,
                 ProfileImageUrl = user.ProfileImageUrl,
-                Projects = user.Projects.Select(p => new ProjectDto {
+                Projects = user.Projects.Select(p => new ProjectDto
+                {
                     Id = p.Id,
                     Title = p.Title,
                     Description = p.Description,
                     ImageUrl = p.ImageUrl,
                     PortfolioUserId = p.PortfolioUserId
                 }).ToList(),
-                Skills = user.Skills.Select(s => new SkillDto {
+                Skills = user.Skills.Select(s => new SkillDto
+                {
                     Id = s.Id,
                     Name = s.Name,
                     Level = s.Level,
@@ -86,7 +88,89 @@ namespace SkillSnap_API.Controllers
             return Ok(dto);
         }
 
-        // POST: api/PortfolioUser
+        // GET: api/PortfolioUser/name/{name}
+        [HttpGet("name/{name}")]
+        public async Task<ActionResult<PortfolioUserDto>> GetByName(string name)
+        {
+            var user = await _context.PortfolioUsers
+                .Include(p => p.Projects)
+                .Include(p => p.Skills)
+                .FirstOrDefaultAsync(u => u.Name == name);
+
+            if (user == null)
+                return NotFound();
+
+            var dto = new PortfolioUserDto
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Bio = user.Bio,
+                ProfileImageUrl = user.ProfileImageUrl,
+                Projects = user.Projects.Select(p => new ProjectDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description,
+                    ImageUrl = p.ImageUrl,
+                    PortfolioUserId = p.PortfolioUserId
+                }).ToList(),
+                Skills = user.Skills.Select(s => new SkillDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Level = s.Level,
+                    PortfolioUserId = s.PortfolioUserId
+                }).ToList()
+            };
+
+            return Ok(dto);
+        }
+
+        // GET: api/PortfolioUser/1/projects
+        [HttpGet("{id}/projects")]
+        public async Task<ActionResult<IEnumerable<ProjectDto>>> GetUserProjects(int id)
+        {
+            var user = await _context.PortfolioUsers
+                .Include(p => p.Projects)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            var projectDtos = user.Projects.Select(p => new ProjectDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Description = p.Description,
+                ImageUrl = p.ImageUrl,
+                PortfolioUserId = p.PortfolioUserId
+            });
+
+            return Ok(projectDtos);
+        }
+        // GET: api/PortfolioUser/1/skills
+        [HttpGet("{id}/skills")]
+        public async Task<ActionResult<IEnumerable<SkillDto>>> GetUserSkills(int id)
+        {
+            var user = await _context.PortfolioUsers
+                .Include(u => u.Skills)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            var skillDtos = user.Skills.Select(s => new SkillDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Level = s.Level,
+                PortfolioUserId = s.PortfolioUserId
+            });
+
+            return Ok(skillDtos);
+        }
+        
+       // POST: api/PortfolioUser
         [HttpPost]
         public async Task<ActionResult<PortfolioUserDto>> Create(PortfolioUserCreateDto input)
         {

@@ -1,35 +1,112 @@
 @page "/project-list"
 @using SkillSnap.Shared.DTOs
 @inject HttpClient Http
+@inject ILogger<ProjectList> Logger
+@inject ISkillSnapApiClient ApiClient
 
 <h3>Project List</h3>
 
+
 @if (projects == null)
 {
-    <p>Loading projects...</p>
+    if(errorMessage != null)
+    {
+        <p class="error">@errorMessage</p>
+    }
+    <div class="project-placeholder-list">
+        @for (int i = 0; i < 3; i++)
+        {
+            <div class="project-placeholder">
+                <div class="placeholder-title">Loading project title...</div>
+                <div class="placeholder-description">Loading project description...</div>
+            </div>
+        }
+    </div>
+}
+else if (!projects.Any())
+{
+    <p>No projects found.</p>
 }
 else
 {
-    <ul>
+    <ul class="project-list">
         @foreach (var project in projects)
         {
-            <li>@project.Title</li>
+            <li class="project-item">
+                <strong>@project.Title</strong><br />
+                <span>@project.Description</span>
+            </li>
         }
     </ul>
 }
 
 @code {
     private List<ProjectDto>? projects;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            projects = (await Http.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/user/projects"))?.ToList();
+            projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading projects: {ex.Message}");
+            errorMessage = "Error loading projects. Please try again later.";
+            Logger.LogError($"Error loading projects: {ex.Message}");
         }
     }
 }
+
+<style>
+    .project-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .project-item {
+        background-color: #f9f9f9;
+        margin-bottom: 0.75rem;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .project-placeholder-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+        background-color: #f9f9f9;
+        padding: 1.5rem;
+        border-radius: 10px;
+        
+        margin: 2rem auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    
+    }
+
+    .project-placeholder {
+        background-color: #f1f1f1;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .placeholder-title,
+    .placeholder-description {
+        background-color: #e0e0e0;
+        height: 1rem;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        width: 80%;
+    }
+
+    .placeholder-description {
+        width: 60%;
+    }
+
+    .error {
+        color: red;
+        text-align: center;
+    }
+</style>

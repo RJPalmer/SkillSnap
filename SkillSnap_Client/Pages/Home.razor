@@ -36,7 +36,7 @@ Welcome to your new app.
             }
             else
             {
-                seedMessage = $"❌ Seeding failed: {response.StatusCode}";
+                seedMessage = $"❌ Uh Oh, Something Went Wrong: {response.StatusCode} {await response.Content.ReadAsStringAsync()}";
             }
         }
         catch (HttpRequestException httpEx)

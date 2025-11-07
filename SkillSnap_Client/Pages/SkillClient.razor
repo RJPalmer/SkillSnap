@@ -1,3 +1,94 @@
 @page "/skill-client"
+@inject HttpClient Http
+@inject ILogger<SkillClient> Logger
+@inject ISkillSnapApiClient ApiClient
 
 <h3>Skill Client Page</h3>
+<p>Welcome to the Skill Client page!</p>
+
+<div class="skill-list">
+    @if (isLoading)
+    {
+        <p>Loading skills...</p>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+        <button class="btn btn-primary" @onclick="LoadSkills">Retry</button>
+    }
+    else if (skills is not null && skills.Any())
+    {
+        <ul>
+            @foreach (var skill in skills)
+            {
+                <li>@skill</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No skills found</p>
+    }
+</div>
+
+@code {
+
+    /// <summary>
+    /// List of skills fetched from the API
+    /// </summary>
+    private List<string>? skills;
+
+    /// <summary>
+    /// Indicates if skills are being loaded
+    /// </summary>
+    private bool isLoading = true;
+
+    /// <summary>
+    /// Error message to display if skill loading fails
+    /// </summary>
+    private string? errorMessage;
+
+    /// <summary>
+    /// Fetch skills from API on initialization
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Example API call — adjust endpoint as needed
+            IEnumerable<SkillDto>? response = await ApiClient.GetUserSkillsAsync();
+
+            if (response != null)
+            {
+                var result = response.Select(s => s.Name).ToList();
+                skills = result ?? new List<string>();
+            }
+            else
+            {
+                errorMessage = $"Failed to fetch skills (Status: No data returned)";
+                Logger.LogWarning("No skills returned from API. Response was null.");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error fetching skills: {ex.Message}";
+            Logger.LogError(ex, "Exception occurred while fetching skills");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Reload skills on button click
+    /// </summary>
+    /// <returns></returns>
+    private async Task LoadSkills()
+    {
+        await OnInitializedAsync();
+    }
+}

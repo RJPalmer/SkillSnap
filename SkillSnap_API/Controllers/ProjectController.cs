@@ -1,11 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap.Shared.Models;
-using SkillSnap.Shared.DTOs;
-using SkillSnap_API.Data;
+using SkillSnap_API.models;
 
 namespace SkillSnap_API.Controllers
 {
@@ -13,96 +13,45 @@ namespace SkillSnap_API.Controllers
     [ApiController]
     public class ProjectController : ControllerBase
     {
-        private readonly SkillSnapDbContext _context;
+        private readonly SkillSnapDBContext _context;
 
-        public ProjectController(SkillSnapDbContext context)
+        public ProjectController(SkillSnapDBContext context)
         {
             _context = context;
         }
 
         // GET: api/Project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProjectDto>>> GetAll()
+        public async Task<ActionResult<IEnumerable<Project>>> GetProject()
         {
-            var projects = await _context.Projects.ToListAsync();
-            var dtos = projects.Select(p => new ProjectDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Description = p.Description,
-                ImageUrl = p.ImageUrl,
-                PortfolioUserId = p.PortfolioUserId
-            });
-            return Ok(dtos);
+            return await _context.Project.ToListAsync();
         }
 
         // GET: api/Project/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProjectDto>> GetById(int id)
+        public async Task<ActionResult<Project>> GetProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _context.Project.FindAsync(id);
+
             if (project == null)
             {
                 return NotFound();
             }
 
-            var dto = new ProjectDto
-            {
-                Id = project.Id,
-                Title = project.Title,
-                Description = project.Description,
-                ImageUrl = project.ImageUrl,
-                PortfolioUserId = project.PortfolioUserId
-            };
-
-            return Ok(dto);
-        }
-
-        // POST: api/Project
-        [HttpPost]
-        public async Task<ActionResult<ProjectDto>> Create(ProjectCreateDto input)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var project = new Project
-            {
-                Title = input.Title,
-                Description = input.Description,
-                ImageUrl = input.ImageUrl,
-                PortfolioUserId = input.PortfolioUserId
-            };
-
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
-
-            var dto = new ProjectDto
-            {
-                Id = project.Id,
-                Title = project.Title,
-                Description = project.Description,
-                ImageUrl = project.ImageUrl,
-                PortfolioUserId = project.PortfolioUserId
-            };
-
-            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+            return project;
         }
 
         // PUT: api/Project/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, ProjectCreateDto input)
+        public async Task<IActionResult> PutProject(int id, Project project)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (id != project.Id)
+            {
+                return BadRequest();
+            }
 
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null)
-                return NotFound();
-
-            project.Title = input.Title;
-            project.Description = input.Description;
-            project.ImageUrl = input.ImageUrl;
-            project.PortfolioUserId = input.PortfolioUserId;
+            _context.Entry(project).State = EntityState.Modified;
 
             try
             {
@@ -111,23 +60,40 @@ namespace SkillSnap_API.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!ProjectExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
+        // POST: api/Project
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<Project>> PostProject(Project project)
+        {
+            _context.Project.Add(project);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetProject", new { id = project.Id }, project);
+        }
+
         // DELETE: api/Project/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _context.Project.FindAsync(id);
             if (project == null)
+            {
                 return NotFound();
+            }
 
-            _context.Projects.Remove(project);
+            _context.Project.Remove(project);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -135,7 +101,7 @@ namespace SkillSnap_API.Controllers
 
         private bool ProjectExists(int id)
         {
-            return _context.Projects.Any(e => e.Id == id);
+            return _context.Project.Any(e => e.Id == id);
         }
     }
 }

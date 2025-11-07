@@ -8,17 +8,24 @@
 
 <h3>User Profile</h3>
 
-@if (userProfile == null)
-{
-    <p>Loading profile...</p>
-}
-else
-{
-    <div class="profile-card">
-        <img src="@userProfile.ProfileImageUrl" alt="Profile picture of @userProfile.Name" class="profile-picture" />
-        <h2>@userProfile.Name</h2>
-        <p>@userProfile.Bio</p>
+<div class="profile-card">
+    <img src="@GetProfileImage()" alt="Profile picture of @userProfile?.Name ?? 'Loading...'" class="profile-picture" />
+
+    <div class="profile-info">
+        <div class="info-row">
+            <strong>Name:</strong>
+            <span>@(userProfile?.Name ?? "Loading...")</span>
+        </div>
+        <div class="info-row">
+            <strong>Bio:</strong>
+            <span>@(userProfile?.Bio ?? "Fetching bio...")</span>
+        </div>
     </div>
+</div>
+
+@if (errorMessage != null)
+{
+    <p class="error">@errorMessage</p>
 }
 
 @code {
@@ -38,7 +45,6 @@ else
         }
         catch (AccessTokenNotAvailableException)
         {
-            // Handled by the client, which will redirect to login
             Logger.LogInformation("User not authenticated, redirecting to login");
         }
         catch (Exception ex)
@@ -46,6 +52,11 @@ else
             errorMessage = "Error loading profile. Please try again later.";
             Logger.LogError(ex, "Error loading user profile");
         }
+    }
+
+    private string GetProfileImage()
+    {
+        return userProfile?.ProfileImageUrl ?? "/images/default_picture.jpeg";
     }
 }
 
@@ -70,12 +81,24 @@ else
         margin-bottom: 1rem;
     }
 
-    h2 {
-        margin: 0.5rem 0;
+    .profile-info {
+        width: 100%;
+        text-align: left;
     }
 
-    p {
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    strong {
+        width: 80px;
+    }
+
+    .error {
         text-align: center;
-        color: #555;
+        color: red;
+        margin-top: 1rem;
     }
 </style>

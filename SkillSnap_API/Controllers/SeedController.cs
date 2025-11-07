@@ -26,7 +26,7 @@ namespace SkillSnap_API.Controllers
         {
             if (_context.PortfolioUsers.Any())
             {
-                return BadRequest("Sample data already exists.");
+                return Conflict("Sample data already exists.");
             }
             var user = new PortfolioUser
             {

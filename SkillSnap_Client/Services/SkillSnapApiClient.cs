@@ -25,6 +25,7 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     public SkillSnapApiClient(HttpClient httpClient, ILogger<SkillSnapApiClient> logger)
     {
         _httpClient = httpClient;
+        _httpClient.BaseAddress = new Uri("https://localhost:7271/");
         _logger = logger;
     }
 
@@ -36,7 +37,15 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<PortfolioUserDto>("api/user/profile");
+
+
+            var userProfile = await _httpClient.GetFromJsonAsync<PortfolioUserDto>("api/portfoliouser/1");
+            if (userProfile == null)
+            {
+                _logger.LogWarning("User profile not found");
+                return null;
+            }
+            return userProfile;
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -59,7 +68,8 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/user/projects")
+            //
+            return await _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/portfoliouser/1/projects")
                    ?? Array.Empty<ProjectDto>();
         }
         catch (AccessTokenNotAvailableException exception)
@@ -83,7 +93,7 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/user/skills")
+            return await _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/portfoliouser/1/skills")
                    ?? Array.Empty<SkillDto>();
         }
         catch (AccessTokenNotAvailableException exception)

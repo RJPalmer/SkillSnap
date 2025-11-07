@@ -12,9 +12,5 @@ using SkillSnap_API.models;
         {
         }
 
-        public DbSet<SkillSnap_API.models.Skill> Skill { get; set; } = default!;
-
-public DbSet<SkillSnap_API.models.PortfolioUser> PortfolioUser { get; set; } = default!;
-
-public DbSet<SkillSnap_API.models.Project> Project { get; set; } = default!;
+        public DbSet<SkillSnap_API.models.Project> Project { get; set; } = default!;
     }

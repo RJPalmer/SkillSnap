@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SkillSnap_API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<SkillSnapDBContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("SkillSnapDBContext") ?? throw new InvalidOperationException("Connection string 'SkillSnapDBContext' not found.")));
 
 builder.WebHost.ConfigureKestrel(options =>
 {
