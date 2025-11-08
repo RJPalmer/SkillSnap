@@ -1,0 +1,103 @@
+@page "/project-detail/{ProjectId}"
+@using SkillSnap.Shared.DTOs
+@inject ISkillSnapApiClient SkillSnapApiClient
+@inject NavigationManager NavManager
+
+<h3>Project Details</h3>
+
+<button class="btn btn-outline-primary mb-3" @onclick="GoBack">← Back to Projects</button>
+<button class="btn btn-warning mb-3 ms-2" @onclick="ToggleEditMode">✎ Edit Project</button>
+
+@if (project == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (isEditing)
+{
+    <EditForm Model="editableProject" OnValidSubmit="SaveChanges">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <InputText class="form-control" @bind-Value="editableProject.Title" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <InputTextArea class="form-control" @bind-Value="editableProject.Description" />
+        </div>
+
+        <button type="submit" class="btn btn-success me-2">💾 Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">✖ Cancel</button>
+    </EditForm>
+}
+else
+{
+    <div>
+        <h4>@project.Title</h4>
+        <p>@project.Description</p>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? ProjectId { get; set; }
+
+    private ProjectDto? project;
+    private ProjectDto editableProject = new();
+    private bool isEditing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        project = await SkillSnapApiClient.GetProjectByIdAsync(ProjectId ?? string.Empty);
+        if (project != null)
+        {
+            editableProject = new ProjectDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description
+            };
+        }
+    }
+
+    private void ToggleEditMode()
+    {
+        if (project != null)
+        {
+            editableProject = new ProjectDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description
+            };
+        }
+        isEditing = !isEditing;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (editableProject != null)
+        {
+            await SkillSnapApiClient.UpdateProjectAsync(editableProject);
+            project = new ProjectDto
+            {
+                Id = editableProject.Id,
+                Title = editableProject.Title,
+                Description = editableProject.Description
+            };
+            isEditing = false;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/project-list");
+    }
+}

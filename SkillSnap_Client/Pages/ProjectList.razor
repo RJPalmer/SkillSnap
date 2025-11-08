@@ -9,7 +9,7 @@
 
 @if (projects == null)
 {
-    if(errorMessage != null)
+    if (errorMessage != null)
     {
         <p class="error">@errorMessage</p>
     }
@@ -32,15 +32,18 @@ else
     <ul class="project-list">
         @foreach (var project in projects)
         {
-            <li class="project-item">
-                <strong>@project.Title</strong><br />
-                <span>@project.Description</span>
+            <li class="project-item" @onclick="@(() => NavigateToDetail(project.Id.ToString()))">
+                <div class="project-content">
+                    <strong>@project.Title</strong><br />
+                    <span>@project.Description</span>
+                </div>
             </li>
         }
     </ul>
 }
 
 @code {
+    @inject NavigationManager NavigationManager
     private List<ProjectDto>? projects;
     private string? errorMessage;
 
@@ -56,6 +59,11 @@ else
             Logger.LogError($"Error loading projects: {ex.Message}");
         }
     }
+
+    private void NavigateToDetail(string projectId)
+    {
+        NavigationManager.NavigateTo($"/project-detail/{projectId}");
+    }
 }
 
 <style>
@@ -69,7 +77,7 @@ else
         margin-bottom: 0.75rem;
         padding: 1rem;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .project-placeholder-list {
@@ -80,10 +88,10 @@ else
         background-color: #f9f9f9;
         padding: 1.5rem;
         border-radius: 10px;
-        
+
         margin: 2rem auto;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    
+
     }
 
     .project-placeholder {
