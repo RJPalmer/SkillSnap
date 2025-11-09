@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
+using SkillSnap_API.Data;
 
 namespace SkillSnap_API.Controllers
 {
@@ -13,9 +14,9 @@ namespace SkillSnap_API.Controllers
     [ApiController]
     public class ProjectController : ControllerBase
     {
-        private readonly SkillSnapDBContext _context;
+        private readonly SkillSnapDbContext _context;
 
-        public ProjectController(SkillSnapDBContext context)
+        public ProjectController(SkillSnapDbContext context)
         {
             _context = context;
         }
@@ -24,14 +25,14 @@ namespace SkillSnap_API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProject()
         {
-            return await _context.Project.ToListAsync();
+            return await _context.Projects.ToListAsync();
         }
 
         // GET: api/Project/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(int id)
         {
-            var project = await _context.Project.FindAsync(id);
+            var project = await _context.Projects.FindAsync(id);
 
             if (project == null)
             {
@@ -51,6 +52,7 @@ namespace SkillSnap_API.Controllers
                 return BadRequest();
             }
 
+            _context.Projects.Update(project);
             _context.Entry(project).State = EntityState.Modified;
 
             try
@@ -77,7 +79,7 @@ namespace SkillSnap_API.Controllers
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
-            _context.Project.Add(project);
+            _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetProject", new { id = project.Id }, project);
@@ -87,13 +89,13 @@ namespace SkillSnap_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Project.FindAsync(id);
+            var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
                 return NotFound();
             }
 
-            _context.Project.Remove(project);
+            _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -101,7 +103,7 @@ namespace SkillSnap_API.Controllers
 
         private bool ProjectExists(int id)
         {
-            return _context.Project.Any(e => e.Id == id);
+            return _context.Projects.Any(e => e.Id == id);
         }
     }
 }

@@ -1,16 +1,39 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using SkillSnap_API.models;
+using SkillSnap.Shared.Models;
 
-    public class SkillSnapDBContext : DbContext
+namespace SkillSnap_API.Data;
+
+public class SkillSnapDbContext : DbContext
+{
+    // Constructor
+    public SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : base(options)
     {
-        public SkillSnapDBContext (DbContextOptions<SkillSnapDBContext> options)
-            : base(options)
-        {
-        }
-
-        public DbSet<SkillSnap_API.models.Project> Project { get; set; } = default!;
     }
+
+    // Model configurations
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Configure one-to-many relationship between PortfolioUser and Project
+        modelBuilder.Entity<PortfolioUser>()
+            .HasMany(pu => pu.Projects)
+            .WithOne()
+            .HasForeignKey(p => p.PortfolioUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configure one-to-many relationship between PortfolioUser and Skill
+        modelBuilder.Entity<PortfolioUser>()
+            .HasMany(pu => pu.Skills)
+            .WithOne()
+            .HasForeignKey(s => s.PortfolioUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Additional configurations can be added here
+    }
+
+    // DbSets
+    public DbSet<PortfolioUser> PortfolioUsers { get; set; }
+    public DbSet<Project> Projects { get; set; }
+    public DbSet<Skill> Skills { get; set; }
+}

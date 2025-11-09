@@ -44,8 +44,13 @@ else
     [Parameter]
     public string? ProjectId { get; set; }
 
-    private ProjectDto? project;
-    private ProjectDto editableProject = new();
+    private SkillSnap.Shared.DTOs.ProjectDto? project;
+    private SkillSnap.Shared.DTOs.ProjectDto editableProject = new ProjectDto() {
+        Id = 0,
+        Title = string.Empty,
+        Description = string.Empty,
+        ImageUrl = string.Empty
+    };
     private bool isEditing = false;
 
     protected override async Task OnInitializedAsync()
@@ -57,7 +62,8 @@ else
             {
                 Id = project.Id,
                 Title = project.Title,
-                Description = project.Description
+                Description = project.Description,
+                ImageUrl = project.ImageUrl
             };
         }
     }
@@ -70,7 +76,9 @@ else
             {
                 Id = project.Id,
                 Title = project.Title,
-                Description = project.Description
+                Description = project.Description,
+                ImageUrl = project.ImageUrl,
+                PortfolioUserId = project.PortfolioUserId
             };
         }
         isEditing = !isEditing;
@@ -80,12 +88,13 @@ else
     {
         if (editableProject != null)
         {
-            await SkillSnapApiClient.UpdateProjectAsync(editableProject);
+            await SkillSnapApiClient.UpdateProjectAsync(ProjectId ?? string.Empty, editableProject);
             project = new ProjectDto
             {
                 Id = editableProject.Id,
                 Title = editableProject.Title,
-                Description = editableProject.Description
+                Description = editableProject.Description,
+                ImageUrl = editableProject.ImageUrl
             };
             isEditing = false;
         }
