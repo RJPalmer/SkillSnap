@@ -7,6 +7,8 @@
 <h3>Project List</h3>
 
 
+
+
 @if (projects == null)
 {
     if (errorMessage != null)
@@ -42,10 +44,44 @@ else
     </ul>
 }
 
+<button class="btn btn-success mb-3" @onclick="ShowCreateForm">+ Add Project</button>
+<button class="btn btn-danger mb-3 ms-2" @onclick="RemoveLastProject">- Remove Last Project</button>
+
+@if (isCreatingProject)
+{
+    <EditForm Model="newProject" OnValidSubmit="SubmitNewProject">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <InputText class="form-control" @bind-Value="newProject.Title" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <InputTextArea class="form-control" @bind-Value="newProject.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Image URL</label>
+            <InputText class="form-control" @bind-Value="newProject.ImageUrl" />
+        </div>
+
+        <button type="submit" class="btn btn-success me-2">💾 Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="CancelCreate">✖ Cancel</button>
+    </EditForm>
+}
 @code {
     @inject NavigationManager NavigationManager
     private List<ProjectDto>? projects;
     private string? errorMessage;
+    private bool isCreatingProject = false;
+    private ProjectDto newProject = new ProjectDto(){
+        Title = string.Empty,
+        Description = string.Empty,
+        ImageUrl = string.Empty
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,6 +99,83 @@ else
     private void NavigateToDetail(string projectId)
     {
         NavigationManager.NavigateTo($"/project-detail/{projectId}");
+    }
+
+    /*private async Task AddProject()
+    {
+        var newProject = new ProjectDto
+        {
+            Title = $"New Project {DateTime.Now:HHmmss}",
+            Description = "This is a newly added project.",
+            ImageUrl = "https://via.placeholder.com/150"
+
+        };
+
+        try
+        {
+            await ApiClient.CreateProjectAsync(newProject);
+            projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error adding project.";
+            Logger.LogError($"Error adding project: {ex.Message}");
+        }
+    }*/
+
+    private async Task RemoveLastProject()
+    {
+        if (projects == null || !projects.Any())
+            return;
+
+        var lastProject = projects.Last();
+        try
+        {
+            await ApiClient.DeleteProjectAsync(lastProject.Id.ToString());
+            projects.Remove(lastProject);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error removing project.";
+            Logger.LogError($"Error removing project: {ex.Message}");
+        }
+    }
+
+    private void ShowCreateForm(){
+            newProject = new ProjectDto(){
+                Title = string.Empty,
+                Description = string.Empty,
+                ImageUrl = string.Empty
+            }; // Reset form fields
+    if(projects != null && projects.Count > 0){
+        newProject.PortfolioUserId = projects.First().PortfolioUserId;
+    }
+    isCreatingProject = true;
+    }
+
+    /// <summary>
+    /// Submits the new project for addition,./mj
+      
+    /// </summary>
+    /// <returns></returns>
+    private async Task SubmitNewProject()
+    {
+        try
+        {
+            await ApiClient.CreateProjectAsync(newProject);
+            projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
+            isCreatingProject = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error adding project.";
+            Logger.LogError($"Error adding project: {ex.Message}");
+        }
+    }
+
+    private void CancelCreate()
+    {
+        isCreatingProject = false;
     }
 }
 
@@ -116,5 +229,32 @@ else
     .error {
         color: red;
         text-align: center;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+        border: none;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
     }
 </style>

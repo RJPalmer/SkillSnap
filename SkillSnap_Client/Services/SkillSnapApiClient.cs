@@ -10,6 +10,7 @@ namespace SkillSnap_Client.Services;
 /// </summary>
 public interface ISkillSnapApiClient
 {
+    
     /// <summary>
     /// Gets the user profile.
     /// </summary>
@@ -28,7 +29,12 @@ public interface ISkillSnapApiClient
     /// <returns></returns>
     Task<IEnumerable<SkillDto>> GetUserSkillsAsync();
 
-    /// <summary>
+    ///<summary>
+    /// Removes a project from the user's project list
+    /// </summary>
+    ///
+    public Task<ProjectDto?> RemoveProjectById(string projectId);
+    
     /// Gets the project by identifier.
     /// </summary>
     /// <param name="projectId"></param>
@@ -156,7 +162,7 @@ public interface ISkillSnapApiClient
     /// <param name="skill"></param>
     /// <returns></returns>
     Task<bool> PatchSkillAsync(string skillId, SkillDto skill);
-    
+
     /// <summary>
     /// Update user profile details.
     /// </summary>
@@ -296,17 +302,57 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         }
     }
 
-    public Task<ProjectDto?> CreateProjectAsync(ProjectDto project)
+    /// <summary>
+    /// Create a new project
+    /// </summary>
+    /// <param name="project"></param>
+    /// <returns></returns>
+    public async Task<ProjectDto?> CreateProjectAsync(ProjectDto newProject)
     {
-        throw new NotImplementedException();
+        if (newProject == null)
+        {
+            _logger.LogWarning("Attempted to add a null project.");
+            throw new ArgumentNullException(nameof(newProject));
+        }
+
+        try
+        {
+            _logger.LogInformation("Adding a new project...");
+
+            var response = await _httpClient.PostAsJsonAsync("api/project", newProject);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var createdProject = await response.Content.ReadFromJsonAsync<ProjectDto>();
+                _logger.LogInformation($"Project '{createdProject?.Title}' created successfully.");
+                return createdProject;
+            }
+            else
+            {
+                _logger.LogWarning($"Failed to create project. Status: {response.StatusCode}");
+                return null;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            _logger.LogWarning("Token not available, redirecting to login.");
+            exception.Redirect();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding new project.");
+            throw;
+        }
+        // throw new NotImplemen   tedException();
     }
 
-/// <summary>
-/// Updates an existing project.
-/// </summary>
-/// <param name="projectId"></param>
-/// <param name="project"></param>
-/// <returns></returns>
+    /// <summary>
+    /// Updates an existing project.
+    /// </summary>
+    /// <param name="projectId"></param>
+    /// <param name="project"></param>
+    /// <returns></returns>
     public Task<bool> UpdateProjectAsync(string projectId, ProjectDto project)
     {
         //validate the projectId
@@ -322,9 +368,47 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         }
     }
 
-    public Task<bool> DeleteProjectAsync(string projectId)
+    /// <summary>
+    /// Deletes the project with the given projectId
+    /// </summary>
+    /// <param name="projectId"></param>
+    /// <returns></returns>
+
+    public async Task<bool> DeleteProjectAsync(string projectId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(projectId))
+        {
+            _logger.LogWarning("Attempted to delete a project with an invalid or empty ID.");
+            throw new ArgumentNullException(nameof(projectId));
+        }
+
+        try
+        {
+            _logger.LogInformation($"Attempting to delete project with ID: {projectId}");
+            var response = await _httpClient.DeleteAsync($"api/project/{projectId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation($"Project with ID {projectId} deleted successfully.");
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning($"Failed to delete project with ID {projectId}. Status: {response.StatusCode}");
+                return false;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            _logger.LogWarning("Token not available, redirecting to login.");
+            exception.Redirect();
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting project with ID {projectId}");
+            throw;
+        }
     }
 
     public Task<SkillDto?> AddSkillAsync(SkillDto skill)
@@ -404,6 +488,55 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     }
 
     public Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Adds a new project.
+    /// </summary>
+    /// <param name="newProject"></param>
+    /// <returns>The created ProjectDto, or null if creation failed.</returns>
+    public async Task<ProjectDto?> AddProjectAsync(ProjectDto newProject)
+    {
+        if (newProject == null)
+        {
+            _logger.LogWarning("Attempted to add a null project.");
+            throw new ArgumentNullException(nameof(newProject));
+        }
+
+        try
+        {
+            _logger.LogInformation("Adding a new project...");
+
+            var response = await _httpClient.PostAsJsonAsync("api/project", newProject);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var createdProject = await response.Content.ReadFromJsonAsync<ProjectDto>();
+                _logger.LogInformation($"Project '{createdProject?.Title}' created successfully.");
+                return createdProject;
+            }
+            else
+            {
+                _logger.LogWarning($"Failed to create project. Status: {response.StatusCode}");
+                return null;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            _logger.LogWarning("Token not available, redirecting to login.");
+            exception.Redirect();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding new project.");
+            throw;
+        }
+    }
+
+    public Task<ProjectDto?> RemoveProjectById(string projectId)
     {
         throw new NotImplementedException();
     }
