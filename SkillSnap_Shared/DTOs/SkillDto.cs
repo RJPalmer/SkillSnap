@@ -7,5 +7,5 @@ public class SkillDto
     public int Id { get; set; }
     public required string Name { get; set; }
     public required string Level { get; set; }
-    public required ICollection<PortfolioUser> PortfolioUsers { get; set; }
+    public ICollection<PortfolioUserSkillDto> SkillPortfolioUsers { get; set; } = new List<PortfolioUserSkillDto>();
 }

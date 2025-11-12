@@ -1,12 +1,16 @@
-using System.Collections.Generic;
-
+using System.ComponentModel.DataAnnotations;
 namespace SkillSnap.Shared.DTOs;
 
 public class PortfolioUserCreateDto
 {
-    public required string Name { get; set; }
-    public required string Bio { get; set; }
-    public required string ProfileImageUrl { get; set; }
-    public List<ProjectCreateDto> Projects { get; set; } = new List<ProjectCreateDto>();
-    public ICollection<PortfolioUserDto> portfolioUserSkills { get; set; } = new List<PortfolioUserDto>();
+    [Required, StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string Bio { get; set; } = string.Empty;
+
+    [Url]
+    public string ProfileImageUrl { get; set; } = string.Empty;
+    public List<ProjectCreateDto> Projects { get; set; } = new();
+    public ICollection<PortfolioUserSkillDto> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
 }

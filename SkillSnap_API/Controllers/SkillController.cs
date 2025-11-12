@@ -24,15 +24,22 @@ namespace SkillSnap_API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SkillDto>>> GetAll()
         {
-            var skills = await _context.Skills.ToListAsync();
+            var skills = await _context.Skills
+                .Include(s => s.SkillPortfolioUsers)
+                .ToListAsync();
+
             var dtos = skills.Select(s => new SkillDto
             {
                 Id = s.Id,
                 Name = s.Name,
                 Level = s.Level,
-                PortfolioUsers = s.PortfolioUsers
-                // PortfolioUserId = s.PortfolioUserId
-            });
+                SkillPortfolioUsers = s.SkillPortfolioUsers.Select(pus => new PortfolioUserSkillDto
+                {
+                    PortfolioUserId = pus.PortfolioUserId,
+                    SkillId = pus.SkillId
+                }).ToList()
+            }).ToList();
+
             return Ok(dtos);
         }
 
@@ -40,7 +47,10 @@ namespace SkillSnap_API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<SkillDto>> GetById(int id)
         {
-            var skill = await _context.Skills.FindAsync(id);
+            var skill = await _context.Skills
+                .Include(s => s.SkillPortfolioUsers)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (skill == null)
                 return NotFound();
 
@@ -49,8 +59,11 @@ namespace SkillSnap_API.Controllers
                 Id = skill.Id,
                 Name = skill.Name,
                 Level = skill.Level,
-                PortfolioUsers = skill.PortfolioUsers
-                // PortfolioUserId = skill.PortfolioUserId
+                SkillPortfolioUsers = skill.SkillPortfolioUsers.Select(pus => new PortfolioUserSkillDto
+                {
+                    PortfolioUserId = pus.PortfolioUserId,
+                    SkillId = pus.SkillId
+                }).ToList()
             };
 
             return Ok(dto);
@@ -66,8 +79,7 @@ namespace SkillSnap_API.Controllers
             var skill = new Skill
             {
                 Name = input.Name,
-                Level = input.Level,
-                PortfolioUsers = input.PortfolioUsers,
+                Level = input.Level
             };
 
             _context.Skills.Add(skill);
@@ -78,8 +90,7 @@ namespace SkillSnap_API.Controllers
                 Id = skill.Id,
                 Name = skill.Name,
                 Level = skill.Level,
-                PortfolioUsers = skill.PortfolioUsers
-                // PortfolioUserId = skill.PortfolioUserId
+                SkillPortfolioUsers = new List<PortfolioUserSkillDto>()
             };
 
             return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
@@ -98,7 +109,6 @@ namespace SkillSnap_API.Controllers
 
             skill.Name = input.Name;
             skill.Level = input.Level;
-            skill.PortfolioUsers = input.PortfolioUsers;
 
             try
             {
@@ -108,8 +118,7 @@ namespace SkillSnap_API.Controllers
             {
                 if (!_context.Skills.Any(e => e.Id == id))
                     return NotFound();
-                else
-                    throw;
+                throw;
             }
 
             return NoContent();
@@ -119,10 +128,14 @@ namespace SkillSnap_API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var skill = await _context.Skills.FindAsync(id);
+            var skill = await _context.Skills
+                .Include(s => s.SkillPortfolioUsers)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (skill == null)
                 return NotFound();
 
+            _context.PortfolioUserSkills.RemoveRange(skill.SkillPortfolioUsers);
             _context.Skills.Remove(skill);
             await _context.SaveChangesAsync();
 

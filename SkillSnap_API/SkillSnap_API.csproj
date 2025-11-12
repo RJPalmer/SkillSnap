@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SkillSnap_Shared\SkillSnap_Shared.csproj" />
+    <ProjectReference Include="../SkillSnap_Shared/SkillSnap_Shared.csproj" />
   </ItemGroup>
   <!-- API references shared DTOs/models so both client and API use the same types. -->
 

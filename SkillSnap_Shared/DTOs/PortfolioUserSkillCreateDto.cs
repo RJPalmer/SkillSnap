@@ -1,4 +1,4 @@
-namespace SkillSnap_Shared.DTOs;
+namespace SkillSnap.Shared.DTOs;
 
 /// <summary>
 /// DTO for creating or updating a PortfolioUserSkill relationship.
@@ -24,4 +24,5 @@ public class PortfolioUserSkillCreateDto
     /// (Optional) Number of years of experience the user has with the skill.
     /// </summary>
     public int? YearsExperience { get; set; }
+
 }

@@ -9,7 +9,6 @@ public class PortfolioUserSkillDto
     /// The ID of the PortfolioUser.
     /// </summary>
     public int PortfolioUserId { get; set; }
-
     /// <summary>
     /// The ID of the Skill.
     /// </summary>

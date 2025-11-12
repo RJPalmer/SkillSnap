@@ -5,5 +5,6 @@ public class SkillCreateDto
 {
     public required string Name { get; set; }
     public required string Level { get; set; }
-    
+
+    public List<PortfolioUserSkillCreateDto>? PortfolioUsers { get; set; } = new();
 }

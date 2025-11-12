@@ -1,4 +1,3 @@
-using SkillSnap.Shared.DTOs;
 
 namespace SkillSnap.Shared.DTOs;
 
@@ -9,5 +8,6 @@ public class PortfolioUserDto
     public required string Bio { get; set; }
     public required string ProfileImageUrl { get; set; }
 
-    public ICollection<PortfolioUserSkillDto> portfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
+    public List<ProjectDto>? Projects { get; set; } = new();
+    public List<PortfolioUserSkillDto>? PortfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
 }
