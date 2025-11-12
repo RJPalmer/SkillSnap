@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using SkillSnap.Shared.DTOs;
 
 namespace SkillSnap.Shared.DTOs;
 
@@ -8,6 +8,6 @@ public class PortfolioUserDto
     public required string Name { get; set; }
     public required string Bio { get; set; }
     public required string ProfileImageUrl { get; set; }
-    public List<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
-    public List<SkillDto> Skills { get; set; } = new List<SkillDto>();
+
+    public ICollection<PortfolioUserSkillDto> portfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
 }

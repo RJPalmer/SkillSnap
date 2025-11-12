@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SkillSnap.Shared.Models;
 using System.Collections.Generic;
 
 namespace SkillSnap.Shared.Models;
@@ -19,5 +20,5 @@ public class PortfolioUser
 
     public required List<Project> Projects { get; set; }
 
-    public required List<Skill> Skills { get; set; }
+   public ICollection<PortfolioUserSkill> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkill>();
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
 using SkillSnap_API.Data;
+using System.Net;
 
 namespace SkillSnap_API.Controllers
 {
@@ -23,7 +24,7 @@ namespace SkillSnap_API.Controllers
         {
             var users = await _context.PortfolioUsers
                 .Include(p => p.Projects)
-                .Include(p => p.Skills)
+                .Include(p => p.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .ToListAsync();
 
             var dtos = users.Select(u => new PortfolioUserDto
@@ -32,18 +33,21 @@ namespace SkillSnap_API.Controllers
                 Name = u.Name,
                 Bio = u.Bio,
                 ProfileImageUrl = u.ProfileImageUrl,
-                Projects = u.Projects.Select(p => new ProjectDto {
+                Projects = u.Projects.Select(p => new ProjectDto
+                {
                     Id = p.Id,
                     Title = p.Title,
                     Description = p.Description,
                     ImageUrl = p.ImageUrl,
                     PortfolioUserId = p.PortfolioUserId
                 }).ToList(),
-                Skills = u.Skills.Select(s => new SkillDto {
+                portfolioUserSkills = u.PortfolioUserSkills.Select(s => new SkillDto
+                {
                     Id = s.Id,
                     Name = s.Name,
                     Level = s.Level,
-                    PortfolioUserId = s.PortfolioUserId
+                    PortfolioUsers = s.PortfolioUsers,
+                    // PortfolioUserId = s.PortfolioUserId
                 }).ToList()
             });
 
@@ -81,7 +85,8 @@ namespace SkillSnap_API.Controllers
                     Id = s.Id,
                     Name = s.Name,
                     Level = s.Level,
-                    PortfolioUserId = s.PortfolioUserId
+                    // PortfolioUserId = s.PortfolioUserId
+                    PortfolioUsers = s.PortfolioUsers
                 }).ToList()
             };
 
@@ -119,7 +124,8 @@ namespace SkillSnap_API.Controllers
                     Id = s.Id,
                     Name = s.Name,
                     Level = s.Level,
-                    PortfolioUserId = s.PortfolioUserId
+                    PortfolioUsers = s.PortfolioUsers
+                    // PortfolioUserId = s.PortfolioUserId
                 }).ToList()
             };
 
@@ -164,13 +170,76 @@ namespace SkillSnap_API.Controllers
                 Id = s.Id,
                 Name = s.Name,
                 Level = s.Level,
-                PortfolioUserId = s.PortfolioUserId
+                PortfolioUsers = s.PortfolioUsers
+                // PortfolioUserId = s.PortfolioUserId
             });
 
             return Ok(skillDtos);
         }
-        
-       // POST: api/PortfolioUser
+
+        [HttpPut("{id}/skills")]
+        public async Task<IActionResult> UpdateUserSkills(int id, [FromBody] IEnumerable<string> skillNames)
+        {
+            if (skillNames == null || !skillNames.Any())
+                return BadRequest("Skill list is empty or missing.");
+
+            var user = await _context.PortfolioUsers
+                .Include(u => u.PortfolioUserSkills)
+                .ThenInclude(pus => pus.Skill)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound($"User with ID {id} not found.");
+
+            // Normalize incoming skill names
+            var normalizedSkills = skillNames
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim().ToLower())
+                .ToList();
+
+            // Load all existing skills for matching
+            var existingSkills = await _context.Skills.ToListAsync();
+
+            foreach (var skillName in normalizedSkills)
+            {
+                // Check if skill exists in DB
+                var skill = existingSkills.FirstOrDefault(s => s.Name.ToLower() == skillName);
+
+                // Create it if it doesn't exist
+                if (skill == null)
+                {
+                    skill = new Skill
+                    {
+                        Name = skillName,
+                        Level = "Beginner" // default level
+                    };
+
+                    _context.Skills.Add(skill);
+                    await _context.SaveChangesAsync();
+
+                    existingSkills.Add(skill);
+                }
+
+                // Check if user already has this skill linked
+                bool alreadyLinked = user.PortfolioUserSkills
+                    .Any(pus => pus.SkillId == skill.Id);
+
+                if (!alreadyLinked)
+                {
+                    var link = new PortfolioUserSkill
+                    {
+                        PortfolioUserId = user.Id,
+                        SkillId = skill.Id
+                    };
+                    _context.PortfolioUserSkills.Add(link);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok("User skills updated successfully.");
+        }
+
+        // POST: api/PortfolioUser
         [HttpPost]
         public async Task<ActionResult<PortfolioUserDto>> Create(PortfolioUserCreateDto input)
         {
@@ -182,16 +251,20 @@ namespace SkillSnap_API.Controllers
                 Name = input.Name,
                 Bio = input.Bio,
                 ProfileImageUrl = input.ProfileImageUrl,
-                Projects = input.Projects.Select(p => new Project {
+                Projects = input.Projects.Select(p => new Project
+                {
                     Title = p.Title,
                     Description = p.Description,
                     ImageUrl = p.ImageUrl,
                     PortfolioUserId = p.PortfolioUserId
                 }).ToList(),
-                Skills = input.Skills.Select(s => new Skill {
-                    Name = s.Name,
-                    Level = s.Level,
-                    PortfolioUserId = s.PortfolioUserId
+                PortfolioUserSkills = input.PortforlioUserSkills.Select(s => new PortfolioUserSkill
+                {
+                   Skill = new Skill
+                   {
+                       Name = s.Name,
+                       Level = s.Level
+                   }
                 }).ToList()
             };
 
@@ -204,18 +277,21 @@ namespace SkillSnap_API.Controllers
                 Name = user.Name,
                 Bio = user.Bio,
                 ProfileImageUrl = user.ProfileImageUrl,
-                Projects = user.Projects.Select(p => new ProjectDto {
+                Projects = user.Projects.Select(p => new ProjectDto
+                {
                     Id = p.Id,
                     Title = p.Title,
                     Description = p.Description,
                     ImageUrl = p.ImageUrl,
                     PortfolioUserId = p.PortfolioUserId
                 }).ToList(),
-                Skills = user.Skills.Select(s => new SkillDto {
+                Skills = user.Skills.Select(s => new SkillDto
+                {
                     Id = s.Id,
                     Name = s.Name,
                     Level = s.Level,
-                    PortfolioUserId = s.PortfolioUserId
+                    PortfolioUsers = s.PortfolioUsers
+                    // PortfolioUserId = s.PortfolioUserId
                 }).ToList()
             };
 
@@ -246,17 +322,19 @@ namespace SkillSnap_API.Controllers
             _context.Projects.RemoveRange(user.Projects);
             _context.Skills.RemoveRange(user.Skills);
 
-            user.Projects = input.Projects.Select(p => new Project {
+            user.Projects = input.Projects.Select(p => new Project
+            {
                 Title = p.Title,
                 Description = p.Description,
                 ImageUrl = p.ImageUrl,
                 PortfolioUserId = id
             }).ToList();
 
-            user.Skills = input.Skills.Select(s => new Skill {
+            user.Skills = input.Skills.Select(s => new Skill
+            {
                 Name = s.Name,
                 Level = s.Level,
-                PortfolioUserId = id
+                PortfolioUsers = s.PortfolioUsers
             }).ToList();
 
             try

@@ -8,5 +8,5 @@ public class PortfolioUserCreateDto
     public required string Bio { get; set; }
     public required string ProfileImageUrl { get; set; }
     public List<ProjectCreateDto> Projects { get; set; } = new List<ProjectCreateDto>();
-    public List<SkillCreateDto> Skills { get; set; } = new List<SkillCreateDto>();
+    public ICollection<PortfolioUserDto> portfolioUserSkills { get; set; } = new List<PortfolioUserDto>();
 }

@@ -11,5 +11,7 @@ public class Skill
 
     public required string Level { get; set; }
 
-    public int PortfolioUserId { get; set; }
+    // public int PortfolioUserId { get; set; }
+
+    public ICollection<PortfolioUserSkill> SkillPortfolioUsers { get; set; } = new List<PortfolioUserSkill>();
 }

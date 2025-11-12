@@ -10,7 +10,7 @@ namespace SkillSnap_Client.Services;
 /// </summary>
 public interface ISkillSnapApiClient
 {
-    
+
     /// <summary>
     /// Gets the user profile.
     /// </summary>
@@ -34,7 +34,7 @@ public interface ISkillSnapApiClient
     /// </summary>
     ///
     public Task<ProjectDto?> RemoveProjectById(string projectId);
-    
+
     /// Gets the project by identifier.
     /// </summary>
     /// <param name="projectId"></param>
@@ -171,6 +171,7 @@ public interface ISkillSnapApiClient
     /// <returns></returns>
     Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile);
 
+    Task<bool> UpdateUserSkillsAsync(IEnumerable<string> skills);
 }
 
 public class SkillSnapApiClient : ISkillSnapApiClient
@@ -426,6 +427,7 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         throw new NotImplementedException();
     }
 
+
     public Task<SkillDto?> GetSkillByIdAsync(string skillId)
     {
         throw new NotImplementedException();
@@ -539,5 +541,48 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     public Task<ProjectDto?> RemoveProjectById(string projectId)
     {
         throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Updates the user's skills.
+    /// </summary>
+    /// <param name="skills">A collection of updated skill names.</param>
+    /// <returns>True if update succeeded, false otherwise.</returns>
+    public async Task<bool> UpdateUserSkillsAsync(IEnumerable<string> skills)
+    {
+        if (skills == null)
+        {
+            _logger.LogWarning("Attempted to update with a null skill list.");
+            throw new ArgumentNullException(nameof(skills));
+        }
+
+        try
+        {
+            _logger.LogInformation("Updating user skills...");
+            
+            var response = await _httpClient.PutAsJsonAsync("api/portfoliouser/1/skills", skills);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("User skills updated successfully.");
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning($"Failed to update skills. Status: {response.StatusCode}");
+                return false;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            _logger.LogWarning("Token not available, redirecting to login.");
+            exception.Redirect();
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating user skills.");
+            throw;
+        }
     }
 }

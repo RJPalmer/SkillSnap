@@ -30,7 +30,8 @@ namespace SkillSnap_API.Controllers
                 Id = s.Id,
                 Name = s.Name,
                 Level = s.Level,
-                PortfolioUserId = s.PortfolioUserId
+                PortfolioUsers = s.PortfolioUsers
+                // PortfolioUserId = s.PortfolioUserId
             });
             return Ok(dtos);
         }
@@ -48,7 +49,8 @@ namespace SkillSnap_API.Controllers
                 Id = skill.Id,
                 Name = skill.Name,
                 Level = skill.Level,
-                PortfolioUserId = skill.PortfolioUserId
+                PortfolioUsers = skill.PortfolioUsers
+                // PortfolioUserId = skill.PortfolioUserId
             };
 
             return Ok(dto);
@@ -65,7 +67,7 @@ namespace SkillSnap_API.Controllers
             {
                 Name = input.Name,
                 Level = input.Level,
-                PortfolioUserId = input.PortfolioUserId
+                PortfolioUsers = input.PortfolioUsers,
             };
 
             _context.Skills.Add(skill);
@@ -76,7 +78,8 @@ namespace SkillSnap_API.Controllers
                 Id = skill.Id,
                 Name = skill.Name,
                 Level = skill.Level,
-                PortfolioUserId = skill.PortfolioUserId
+                PortfolioUsers = skill.PortfolioUsers
+                // PortfolioUserId = skill.PortfolioUserId
             };
 
             return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
@@ -95,7 +98,7 @@ namespace SkillSnap_API.Controllers
 
             skill.Name = input.Name;
             skill.Level = input.Level;
-            skill.PortfolioUserId = input.PortfolioUserId;
+            skill.PortfolioUsers = input.PortfolioUsers;
 
             try
             {

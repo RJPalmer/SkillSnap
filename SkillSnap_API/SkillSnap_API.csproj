@@ -20,9 +20,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
   </ItemGroup>
-  <!-- API references shared DTOs/models so both client and API use the same types. -->
+
   <ItemGroup>
     <ProjectReference Include="..\SkillSnap_Shared\SkillSnap_Shared.csproj" />
   </ItemGroup>
+  <!-- API references shared DTOs/models so both client and API use the same types. -->
 
 </Project>
