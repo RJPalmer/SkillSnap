@@ -118,15 +118,13 @@
                 var result = response.Select(s => s.Name).ToList();
                 skills = result ?? new List<string>();
             }
-            if (response == null || !response.Any())
-            {
-                skills = new List<string>();
-                isEditing = true; // start edit mode automatically
-            }
-            else
+            else if (response == null || !response.Any())
             {
                 errorMessage = $"Failed to fetch skills (Status: No data returned)";
                 Logger.LogWarning("No skills returned from API. Response was null.");
+                
+                skills = new List<string>();
+                isEditing = true; // start edit mode automatically
             }
         }
         catch (Exception ex)

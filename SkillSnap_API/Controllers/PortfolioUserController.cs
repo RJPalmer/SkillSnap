@@ -168,25 +168,40 @@ namespace SkillSnap_API.Controllers
         [HttpGet("{id}/skills")]
         public async Task<ActionResult<IEnumerable<PortfolioUserSkillDto>>> GetUserSkills(int id)
         {
+            List<SkillDto> results = new List<SkillDto>();
+
+            //get the user info
             var user = await _context.PortfolioUsers
                 .Include(u => u.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
+            //if the user is not found, return not found
             if (user == null)
                 return NotFound();
-            var skillDtos = user.PortfolioUserSkills.Select(pus => new PortfolioUserSkillDto
+            //otherwise if the user doesn't have any skills listed
+            if (user.PortfolioUserSkills == null || !user.PortfolioUserSkills.Any())
+                return Ok(results);
+            else
             {
-                SkillId = pus.SkillId,
-                PortfolioUserId = pus.PortfolioUserId,
-                Skill = new SkillDto
+                var skillDtos = user.PortfolioUserSkills.Select(pus => new PortfolioUserSkillDto
                 {
-                    Id = pus.Skill.Id,
-                    Name = pus.Skill.Name,
-                    Level = pus.Skill.Level
-                }
-            });
-
-            return Ok(skillDtos);
+                    SkillId = pus.SkillId,
+                    PortfolioUserId = pus.PortfolioUserId,
+                    Skill = new SkillDto
+                    {
+                        Id = pus.Skill.Id,
+                        Name = pus.Skill.Name,
+                        Level = pus.Skill.Level
+                    }
+                });
+                foreach (var item in skillDtos)
+                {
+                    if(item.Skill != null)
+                        results.Add(item.Skill);
+                } 
+                return Ok(results);
+            }
+            
         }
 
         // PUT: api/PortfolioUser/{id}/skills
