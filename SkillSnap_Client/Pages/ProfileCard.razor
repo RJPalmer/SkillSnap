@@ -9,18 +9,38 @@
 <h3>User Profile</h3>
 
 <div class="profile-card">
-    <img src="@GetProfileImage()" alt="Profile picture of @userProfile?.Name ?? 'Loading...'" class="profile-picture" />
+    <img src="@GetProfileImage()" alt="Profile picture of @(editableProfile?.Name ?? userProfile?.Name ?? "Loading...")" class="profile-picture" />
 
-    <div class="profile-info">
-        <div class="info-row">
-            <strong>Name:</strong>
-            <span>@(userProfile?.Name ?? "Loading...")</span>
+    @if (isEditing)
+    {
+        <div class="edit-form">
+            <label>Name:</label>
+            <input @bind="editableProfile.Name" />
+
+            <label>Bio:</label>
+            <textarea @bind="editableProfile.Bio"></textarea>
+
+            <label>Profile Image URL:</label>
+            <input @bind="editableProfile.ProfileImageUrl" />
+
+            <button @onclick="SaveProfile">Save</button>
+            <button @onclick="CancelEdit">Cancel</button>
         </div>
-        <div class="info-row">
-            <strong>Bio:</strong>
-            <span>@(userProfile?.Bio ?? "Fetching bio...")</span>
+    }
+    else
+    {
+        <div class="profile-info">
+            <div class="info-row">
+                <strong>Name:</strong>
+                <span>@(userProfile?.Name ?? "Loading...")</span>
+            </div>
+            <div class="info-row">
+                <strong>Bio:</strong>
+                <span>@(userProfile?.Bio ?? "Fetching bio...")</span>
+            </div>
+            <button @onclick="EnterEditMode">Edit Profile</button>
         </div>
-    </div>
+    }
 </div>
 
 @if (errorMessage != null)
@@ -31,6 +51,9 @@
 @code {
     private PortfolioUserDto? userProfile;
     private string? errorMessage;
+
+    private bool isEditing = false;
+    private PortfolioUserDto? editableProfile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,7 +79,63 @@
 
     private string GetProfileImage()
     {
-        return userProfile?.ProfileImageUrl ?? "/images/default_picture.jpeg";
+        return (editableProfile?.ProfileImageUrl ?? userProfile?.ProfileImageUrl) ?? "/images/default_picture.jpeg";
+    }
+
+    private void EnterEditMode()
+    {
+        if (userProfile != null)
+        {
+            editableProfile = new PortfolioUserDto
+            {
+                Id = userProfile.Id,
+                Name = userProfile.Name,
+                Bio = userProfile.Bio,
+                ProfileImageUrl = userProfile.ProfileImageUrl
+            };
+            isEditing = true;
+            errorMessage = null;
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        try
+        {
+            if (editableProfile != null)
+            {
+                // Basic validation
+                if (string.IsNullOrWhiteSpace(editableProfile.Name))
+                {
+                    errorMessage = "Name cannot be empty.";
+                    return;
+                }
+
+                var success = await ApiClient.UpdateUserProfileAsync(editableProfile.Id.ToString(), editableProfile);
+                if (success)
+                {
+                    userProfile = editableProfile;
+                    isEditing = false;
+                    errorMessage = null;
+                }
+                else
+                {
+                    errorMessage = "Failed to update profile.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating profile");
+            errorMessage = "Error updating profile.";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        editableProfile = null;
+        errorMessage = null;
     }
 }
 
@@ -100,5 +179,12 @@
         text-align: center;
         color: red;
         margin-top: 1rem;
+    }
+
+    .edit-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
     }
 </style>
