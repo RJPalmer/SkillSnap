@@ -1,3 +1,191 @@
 @page "/skill-client"
+@inject HttpClient Http
+@inject ILogger<SkillClient> Logger
+@inject ISkillSnapApiClient ApiClient
 
 <h3>Skill Client Page</h3>
+<p>Welcome to the Skill Client page!</p>
+
+<div class="mb-3">
+    @if (!isEditing)
+    {
+        <button class="btn btn-warning" @onclick="EnableEditing">✎ Edit Skills</button>
+    }
+    else
+    {
+        <button class="btn btn-success me-2" @onclick="SaveSkills">✔ Done</button>
+        <button class="btn btn-secondary" @onclick="CancelEditing">✖ Cancel</button>
+    }
+</div>
+
+<div class="skill-list">
+    @if (isLoading)
+    {
+        <p>Loading skills...</p>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+        <button class="btn btn-primary" @onclick="LoadSkills">Retry</button>
+    }
+    else if (skills is not null && skills.Any())
+    {
+        <ul class="list-unstyled">
+            @for (int i = 0; i < skills.Count; i++)
+            {
+                <li class="mb-2">
+                    @if (isEditing)
+                    {
+                        <input type="text" class="form-control d-inline w-auto" @bind="skills[i]" />
+                    }
+                    else
+                    {
+                        @skills[i]
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (isEditing)
+        {
+            <div class="mt-3">
+                <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add new skill..." @bind="newSkill" />
+                <button class="btn btn-primary" @onclick="AddSkill">+ Add</button>
+            </div>
+        }
+    }
+    else
+    {
+        <p>No skills found</p>
+
+        @if (isEditing)
+        {
+            <div class="mt-3">
+                <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add your first skill..."
+                    @bind="newSkill" />
+                <button class="btn btn-primary" @onclick="AddSkill">+ Add Skill</button>
+            </div>
+        }
+        else
+        {
+            <button class="btn btn-outline-primary mt-2" @onclick="EnableEditing">Add your first skill</button>
+        }
+    }
+</div>
+
+@code {
+
+    /// <summary>k
+    /// List of skills fetched from the API
+    /// </summary>
+    private List<string>? skills;
+
+    /// <summary>
+    /// Indicates if skills are being loaded
+    /// </summary>
+    private bool isLoading = true;
+
+    /// <summary>
+    /// Error message to display if skill loading fails
+    /// </summary>
+    private string? errorMessage;
+
+    /// <summary>
+    /// Indicates editing mode
+    /// </summary>
+    private bool isEditing = false;
+
+    /// <summary>
+    /// A new skill to be added by the user
+    /// </summary>
+    private string? newSkill = string.Empty;
+
+    /// <summary>
+    /// Fetch skills from API on initialization
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Example API call — adjust endpoint as needed
+            IEnumerable<SkillDto>? response = await ApiClient.GetUserSkillsAsync();
+
+            if (response != null)
+            {
+                var result = response.Select(s => s.Name).ToList();
+                skills = result ?? new List<string>();
+            }
+            else if (response == null || !response.Any())
+            {
+                errorMessage = $"Failed to fetch skills (Status: No data returned)";
+                Logger.LogWarning("No skills returned from API. Response was null.");
+                
+                skills = new List<string>();
+                isEditing = true; // start edit mode automatically
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error fetching skills: {ex.Message}";
+            Logger.LogError(ex, "Exception occurred while fetching skills");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Reload skills on button click
+    /// </summary>
+    /// <returns></returns>
+    private async Task LoadSkills()
+    {
+        await OnInitializedAsync();
+    }
+
+    private void EnableEditing()
+    {
+        isEditing = true;
+    }
+
+    private void CancelEditing()
+    {
+        isEditing = false;
+        newSkill = string.Empty;
+    }
+
+    private void AddSkill()
+    {
+        if (!string.IsNullOrWhiteSpace(newSkill))
+        {
+            skills ??= new List<string>();
+            skills.Add(newSkill.Trim());
+            newSkill = string.Empty;
+        }
+    }
+
+    private async Task SaveSkills()
+    {
+        try
+        {
+            if (skills != null)
+            {
+                bool result = await ApiClient.UpdateUserSkillsAsync(skills);
+                if(result)
+                    Logger.LogInformation("Skills updated successfully.");
+                else
+                    Logger.LogError(message:"Unable to update skills.");
+            }
+            isEditing = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving skills.");
+            errorMessage = "Failed to save skills.";
+        }
+    }
+}

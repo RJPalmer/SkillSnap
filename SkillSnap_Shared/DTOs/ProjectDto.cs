@@ -1,19 +1,18 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System;
+namespace SkillSnap.Shared.DTOs;
 
-namespace SkillSnap_API.models;
-
-public class Project
+public class ProjectDto
 {
-    [Key]
+    public ProjectDto()
+    {
+        Id = 0;
+        Title = string.Empty;
+        Description = string.Empty;
+        ImageUrl = string.Empty;
+    }
     public int Id { get; set; }
-
     public required string Title { get; set; }
-
     public required string Description { get; set; }
-
     public required string ImageUrl { get; set; }
-
-    [ForeignKey("PortfolioUser")]
     public int PortfolioUserId { get; set; }
 }

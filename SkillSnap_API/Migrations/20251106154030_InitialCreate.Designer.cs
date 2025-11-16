@@ -3,13 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using SkillSnap_API.Data;
 
 #nullable disable
 
 namespace SkillSnap_API.Migrations
 {
     [DbContext(typeof(SkillSnapDbContext))]
-    [Migration("20251030172215_InitialCreate")]
+    [Migration("20251106154030_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -18,7 +19,7 @@ namespace SkillSnap_API.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
 
-            modelBuilder.Entity("SkillSnap_API.models.PortfolioUser", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -41,7 +42,7 @@ namespace SkillSnap_API.Migrations
                     b.ToTable("PortfolioUsers");
                 });
 
-            modelBuilder.Entity("SkillSnap_API.models.Project", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.Project", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -69,7 +70,7 @@ namespace SkillSnap_API.Migrations
                     b.ToTable("Projects");
                 });
 
-            modelBuilder.Entity("SkillSnap_API.models.Skill", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.Skill", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -93,25 +94,25 @@ namespace SkillSnap_API.Migrations
                     b.ToTable("Skills");
                 });
 
-            modelBuilder.Entity("SkillSnap_API.models.Project", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.Project", b =>
                 {
-                    b.HasOne("SkillSnap_API.models.PortfolioUser", null)
+                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", null)
                         .WithMany("Projects")
                         .HasForeignKey("PortfolioUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SkillSnap_API.models.Skill", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.Skill", b =>
                 {
-                    b.HasOne("SkillSnap_API.models.PortfolioUser", null)
+                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", null)
                         .WithMany("Skills")
                         .HasForeignKey("PortfolioUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("SkillSnap_API.models.PortfolioUser", b =>
+            modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
                 {
                     b.Navigation("Projects");
 

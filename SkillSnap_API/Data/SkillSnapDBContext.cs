@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
+
+namespace SkillSnap_API.Data;
 
 public class SkillSnapDbContext : DbContext
 {
@@ -20,14 +21,21 @@ public class SkillSnapDbContext : DbContext
             .WithOne()
             .HasForeignKey(p => p.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Configure one-to-many relationship between PortfolioUser and Skill
         modelBuilder.Entity<PortfolioUser>()
-            .HasMany(pu => pu.Skills)
+            .HasMany(pu => pu.PortfolioUserSkills)
             .WithOne()
-            .HasForeignKey(s => s.PortfolioUserId)
+            .HasForeignKey(pus => pus.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
-
+        modelBuilder.Entity<Skill>()
+            .HasMany(s => s.SkillPortfolioUsers)
+            .WithOne()
+            .HasForeignKey(pus => pus.SkillId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PortfolioUserSkill>()
+            .HasKey(pus => new { pus.PortfolioUserId, pus.SkillId });
+            
+       
+        
         // Additional configurations can be added here
     }
 
@@ -35,4 +43,6 @@ public class SkillSnapDbContext : DbContext
     public DbSet<PortfolioUser> PortfolioUsers { get; set; }
     public DbSet<Project> Projects { get; set; }
     public DbSet<Skill> Skills { get; set; }
+    
+    public DbSet<PortfolioUserSkill> PortfolioUserSkills{ get; set; }
 }

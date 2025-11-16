@@ -1,13 +1,35 @@
 using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
-
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
+using SkillSnap_API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<SkillSnapDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("SkillSnapDbContext") ?? throw new InvalidOperationException("Connection string 'SkillSnapDbContext' not found.")));
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(7271, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+    options.ListenLocalhost(5169);
+}); 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Add CORS policy for Blazor WASM client
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("BlazorClient", policy =>
+    {
+        policy.WithOrigins("https://localhost:7053") // Update with your Blazor client URL
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // Add controllers
 builder.Services.AddControllers()
@@ -32,9 +54,11 @@ builder.Services.AddControllers()
         };
     });
 
-//add db context
+// Configure DbContext with connection string from appsettings.json
 builder.Services.AddDbContext<SkillSnapDbContext>(options =>
-    options.UseSqlite("Data Source=skillsnap.db")
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."))
 );
 
 var app = builder.Build();
@@ -45,6 +69,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors("BlazorClient");
 app.UseHttpsRedirection();
 app.MapControllers();
 
