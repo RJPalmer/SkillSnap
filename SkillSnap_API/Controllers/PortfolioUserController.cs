@@ -352,7 +352,7 @@ namespace SkillSnap_API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
-        // PUT: api/PortfolioUser/{id}
+        // PUT: api/PortfolioUser/{id}  
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, PortfolioUserCreateDto input)
         {
@@ -371,6 +371,7 @@ namespace SkillSnap_API.Controllers
             user.Bio = input.Bio;
             user.ProfileImageUrl = input.ProfileImageUrl;
 
+            /*
             _context.Projects.RemoveRange(user.Projects);
             user.Projects = input.Projects?.Select(p => new Project
             {
@@ -414,7 +415,7 @@ namespace SkillSnap_API.Controllers
                     });
                 }
             }
-
+            */
             try
             {
                 await _context.SaveChangesAsync();

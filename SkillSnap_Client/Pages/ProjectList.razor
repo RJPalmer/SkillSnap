@@ -45,6 +45,7 @@ else
 }
 
 <button class="btn btn-success mb-3" @onclick="ShowCreateForm">+ Add Project</button>
+<button class="btn btn-primary mb-3 ms-2" @onclick="ShowAttachForm">+ Attach Existing Project</button>
 <button class="btn btn-danger mb-3 ms-2" @onclick="RemoveLastProject">- Remove Last Project</button>
 
 @if (isCreatingProject)
@@ -72,22 +73,54 @@ else
         <button type="button" class="btn btn-secondary" @onclick="CancelCreate">✖ Cancel</button>
     </EditForm>
 }
+
+@if (isAttachingProject)
+{
+    <select @bind="selectedProjectId" class="form-select">
+        <option disabled value="">-- Select a project --</option>
+        @foreach (var project in availableProjects)
+        {
+            <option value="@project.Id">@project.Title</option>
+        }
+    </select>
+    <button class="btn btn-success me-2" @onclick="AttachProject">Attach</button>
+    <button class="btn btn-secondary" @onclick="CancelAttach">Cancel</button>
+}
 @code {
+
+
     @inject NavigationManager NavigationManager
     private List<ProjectDto>? projects;
     private string? errorMessage;
     private bool isCreatingProject = false;
-    private ProjectDto newProject = new ProjectDto(){
+
+    private bool isAttachingProject = false;
+
+    private List<ProjectDto> availableProjects = new();
+
+    private ProjectDto newProject = new ProjectDto()
+    {
         Title = string.Empty,
         Description = string.Empty,
         ImageUrl = string.Empty
     };
+
+    private string? selectedProjectId;
+    private string userId = "1"; // assuming static for now, adjust if dynamic
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
+            var allProjects = await ApiClient.GetAllProjectsAsync();
+            var existingIds = projects?.Select(p => p.Id).ToHashSet();
+            if(existingIds == null){
+                Logger.LogError("Error trying to get existing projects.");
+                throw new Exception("Error trying to get existing projects.");
+            }
+            availableProjects = allProjects.Where(p => !existingIds.Contains(p.Id)).ToList();
+
         }
         catch (Exception ex)
         {
@@ -103,26 +136,30 @@ else
 
     /*private async Task AddProject()
     {
-        var newProject = new ProjectDto
-        {
-            Title = $"New Project {DateTime.Now:HHmmss}",
-            Description = "This is a newly added project.",
-            ImageUrl = "https://via.placeholder.com/150"
+    var newProject = new ProjectDto
+    {
+    Title = $"New Project {DateTime.Now:HHmmss}",
+    Description = "This is a newly added project.",
+    ImageUrl = "https://via.placeholder.com/150"
 
-        };
+    };
 
-        try
-        {
-            await ApiClient.CreateProjectAsync(newProject);
-            projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Error adding project.";
-            Logger.LogError($"Error adding project: {ex.Message}");
-        }
+    try
+    {
+    await ApiClient.CreateProjectAsync(newProject);
+    projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
+    }
+    catch (Exception ex)
+    {
+    errorMessage = "Error adding project.";
+    Logger.LogError($"Error adding project: {ex.Message}");
+    }
     }*/
 
+    /// <summary>
+    ///
+    /// </summary>
+    /// <returns></returns>
     private async Task RemoveLastProject()
     {
         if (projects == null || !projects.Any())
@@ -141,27 +178,69 @@ else
         }
     }
 
-    private void ShowCreateForm(){
-            newProject = new ProjectDto(){
-                Title = string.Empty,
-                Description = string.Empty,
-                ImageUrl = string.Empty
-            }; // Reset form fields
-    if(projects != null && projects.Count > 0){
-        newProject.PortfolioUserId = projects.First().PortfolioUserId;
-    }
-    isCreatingProject = true;
+    /// <summary>
+    ///
+    /// </summary>
+    private void ShowCreateForm()
+    {
+        newProject = new ProjectDto()
+        {
+            Title = string.Empty,
+            Description = string.Empty,
+            ImageUrl = string.Empty
+        }; // Reset form fields
+        if (projects != null && projects.Count > 0)
+        {
+            newProject.PortfolioUserId = projects.First().PortfolioUserId;
+        }
+        isCreatingProject = true;
     }
 
+    private async Task ShowAttachForm()
+    {
+        try
+        {
+            var allProjects = await ApiClient.GetAllProjectsAsync();
+            var existingIds = projects?.Select(p => p.Id).ToHashSet() ?? new HashSet<int>();
+            availableProjects = allProjects.Where(p => !existingIds.Contains(p.Id)).ToList();
+            isAttachingProject = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error loading available projects.";
+            Logger.LogError($"Error loading available projects: {ex.Message}");
+        }
+    }
+
+    private async Task AttachProject()
+    {
+        if (!string.IsNullOrEmpty(selectedProjectId))
+        {
+            var linkedSuccessfully = await ApiClient.PatchProjectAsync(
+                selectedProjectId, new ProjectDto { PortfolioUserId = int.Parse(userId),
+                Description = string.Empty,
+                ImageUrl= string.Empty,Title = string.Empty });
+
+            if (linkedSuccessfully)
+            {
+                projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
+                isAttachingProject = false;
+            }
+            else
+            {
+                errorMessage = "Failed to attach project.";
+            }
+        }
+    }
     /// <summary>
-    /// Submits the new project for addition,./mj
-      
+    /// Submits the new project for addition
     /// </summary>
     /// <returns></returns>
     private async Task SubmitNewProject()
     {
         try
-        {
+        {   
+            newProject.PortfolioUserId = 1;
             await ApiClient.CreateProjectAsync(newProject);
             projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
             isCreatingProject = false;
@@ -173,9 +252,22 @@ else
         }
     }
 
+    /// <summary>
+    ///
+    /// </summary>
     private void CancelCreate()
     {
         isCreatingProject = false;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private void CancelAttach()
+    {
+        isAttachingProject = false;
     }
 }
 
