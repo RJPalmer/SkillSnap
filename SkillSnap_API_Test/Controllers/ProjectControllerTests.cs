@@ -8,6 +8,7 @@ using SkillSnap_API.Data;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
 using Xunit;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SkillSnap_API_Test.Controllers
 {
@@ -72,10 +73,12 @@ namespace SkillSnap_API_Test.Controllers
 
             // Act
             var result = await controller.PostProject(newProject);
+            var caaResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            var pDto = Assert.IsType<ProjectDto>(caaResult.Value);
 
             // Assert
-            Assert.NotNull(result.Value);
-            Assert.Equal("New Project", result.Value.Title);
+            Assert.NotNull(pDto);
+            Assert.Equal("New Project", pDto.Title);
             Assert.Single(dbContext.Projects);
         }
 

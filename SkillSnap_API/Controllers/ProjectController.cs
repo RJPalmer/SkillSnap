@@ -78,7 +78,7 @@ namespace SkillSnap_API.Controllers
         // POST: api/Project
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Project>> PostProject(ProjectCreateDto newProject)
+        public async Task<ActionResult<ProjectDto>> PostProject(ProjectCreateDto newProject)
         {
             if(!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -87,7 +87,15 @@ namespace SkillSnap_API.Controllers
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProject", new { id = project.Id }, project);
+            var dto = new ProjectDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Description = project.Description,
+                ImageUrl = project.ImageUrl
+
+            };
+            return CreatedAtAction("GetProject", new { id = dto.Id }, dto);
         }
 
         // DELETE: api/Project/5

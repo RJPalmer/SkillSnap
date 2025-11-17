@@ -31,7 +31,7 @@ namespace SkillSnap_API_Test.Integration
             var dbContext = GetInMemoryDbContext();
             dbContext.Projects.AddRange(
                 new Project { Id = 1, Title = "Test Project 1", Description = "Description 1", ImageUrl = "ImageURL 1" },
-                new Project { Id = 2, Title = "Test Project 2", Description = "Description 2", ImageUrl = "ImageURL 1" }
+                new Project { Id = 2, Title = "Test Project 2", Description = "Description 2", ImageUrl = "ImageURL 2" }
             );
             await dbContext.SaveChangesAsync();
 
