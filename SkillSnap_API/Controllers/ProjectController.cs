@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SkillSnap.Shared.DTOs;
 using SkillSnap.Shared.Models;
 using SkillSnap_API.Data;
 
@@ -23,7 +24,7 @@ namespace SkillSnap_API.Controllers
 
         // GET: api/Project
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProject()
+        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
             return await _context.Projects.ToListAsync();
         }
@@ -77,8 +78,12 @@ namespace SkillSnap_API.Controllers
         // POST: api/Project
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Project>> PostProject(Project project)
+        public async Task<ActionResult<Project>> PostProject(ProjectCreateDto newProject)
         {
+            if(!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var project = new Project{Title = newProject.Title, Description = newProject.Description, ImageUrl = newProject.ImageUrl};    
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
@@ -105,5 +110,38 @@ namespace SkillSnap_API.Controllers
         {
             return _context.Projects.Any(e => e.Id == id);
         }
+
+        /// <summary>
+        /// AttachProjectToUser
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="projectId"></param>
+        /// <returns></returns>
+        [HttpPost("attach")]
+        public async Task<IActionResult> AttachProjectToUser(int userId, int projectId)
+        {
+            // Check that both the user and project exist.
+            var user = await _context.PortfolioUsers
+                .Include(u => u.Projects)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                return NotFound($"User with ID {userId} not found.");
+
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null)
+                return NotFound($"Project with ID {projectId} not found.");
+            
+            //Add the project to the user’s list of projects
+            if (user.Projects.Any(p => p.Id == projectId))
+                return Conflict($"Project with ID {projectId} is already attached to User {userId}.");
+
+            user.Projects.Add(project);
+
+            await _context.SaveChangesAsync();
+
+            return Ok($"Project {projectId} successfully attached to User {userId}.");
+        }
+
     }
 }

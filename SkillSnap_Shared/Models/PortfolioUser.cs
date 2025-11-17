@@ -18,7 +18,7 @@ public class PortfolioUser
 
     public string? ProfilePictureUrl => ProfileImageUrl;
 
-    public required List<Project> Projects { get; set; }
+    public List<Project> Projects { get; set; }
 
    public ICollection<PortfolioUserSkill> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkill>();
 }

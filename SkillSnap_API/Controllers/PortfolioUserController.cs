@@ -11,10 +11,25 @@ namespace SkillSnap_API.Controllers
     public class PortfolioUserController : ControllerBase
     {
         private readonly SkillSnapDbContext _context;
+        private object value;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
         public PortfolioUserController(SkillSnapDbContext context)
         {
             _context = context;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="value"></param>
+        public PortfolioUserController(SkillSnapDbContext context, object value) : this(context)
+        {
+            this.value = value;
         }
 
         // GET: api/PortfolioUser
