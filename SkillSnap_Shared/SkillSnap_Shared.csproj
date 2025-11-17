@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="DTOs/.config/dotnet-tools.json" />
+  </ItemGroup>
+
 </Project>

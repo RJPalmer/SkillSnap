@@ -17,15 +17,19 @@ public class SkillSnapDbContext : DbContext
 
         // Configure one-to-many relationship between PortfolioUser and Project
         modelBuilder.Entity<PortfolioUser>()
-            .HasMany(pu => pu.Projects)
+            .HasMany(pu => pu.portfolioUserProjects)
             .WithOne()
-            .HasForeignKey(p => p.PortfolioUserId)
+            .HasForeignKey(pup => pup.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<PortfolioUser>()
             .HasMany(pu => pu.PortfolioUserSkills)
             .WithOne()
             .HasForeignKey(pus => pus.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Project>()
+            .HasMany(pup => pup.portfolioUserProjects)
+            .WithOne()
+            .HasForeignKey(p => p.projectId);
         modelBuilder.Entity<Skill>()
             .HasMany(s => s.SkillPortfolioUsers)
             .WithOne()
@@ -33,6 +37,8 @@ public class SkillSnapDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<PortfolioUserSkill>()
             .HasKey(pus => new { pus.PortfolioUserId, pus.SkillId });
+        modelBuilder.Entity<PortfolioUserProject>()
+            .HasKey(pup => new {pup.PortfolioUserId, pup.projectId});
             
        
         
@@ -43,6 +49,6 @@ public class SkillSnapDbContext : DbContext
     public DbSet<PortfolioUser> PortfolioUsers { get; set; }
     public DbSet<Project> Projects { get; set; }
     public DbSet<Skill> Skills { get; set; }
-    
+    public DbSet<PortfolioUserProject> PortfolioUserProjects{get; set;}       
     public DbSet<PortfolioUserSkill> PortfolioUserSkills{ get; set; }
 }

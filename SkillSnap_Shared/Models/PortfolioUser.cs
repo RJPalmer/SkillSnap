@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using SkillSnap.Shared.Models;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace SkillSnap.Shared.Models;
 
@@ -18,7 +19,7 @@ public class PortfolioUser
 
     public string? ProfilePictureUrl => ProfileImageUrl;
 
-    public List<Project> Projects { get; set; }
+    public ICollection<PortfolioUserProject> portfolioUserProjects{ get; set; } = new List<PortfolioUserProject>();
 
    public ICollection<PortfolioUserSkill> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkill>();
 }

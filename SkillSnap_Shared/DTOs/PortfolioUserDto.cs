@@ -8,6 +8,6 @@ public class PortfolioUserDto
     public required string Bio { get; set; }
     public required string ProfileImageUrl { get; set; }
 
-    public List<ProjectDto>? Projects { get; set; } = new();
+    public List<PortfolioUserProjectDto>? Projects { get; set; } = new List<PortfolioUserProjectDto>();
     public List<PortfolioUserSkillDto>? PortfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
 }

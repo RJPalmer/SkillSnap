@@ -11,6 +11,6 @@ public class PortfolioUserCreateDto
 
     [Url]
     public string ProfileImageUrl { get; set; } = string.Empty;
-    public List<ProjectCreateDto> Projects { get; set; } = new();
+    public List<PortfolioUserProjectDto> Projects { get; set; } = new();
     public ICollection<PortfolioUserSkillDto> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkillDto>();
 }

@@ -35,23 +35,34 @@ namespace SkillSnap_API.Controllers
                 Name = "Jordan Developer",
                 Bio = "Full-stack developer passionate about learning new tech.",
                 ProfileImageUrl = "https://example.com/images/jordan.png",
-                Projects = new List<Project>
+                portfolioUserProjects = new List<PortfolioUserProject>()
+            };
+            var projects = new List<Project>
                 {
                     new Project { Title = "Task Tracker", Description = "Manage tasks effectively", ImageUrl = "https://example.com/images/task.png" },
                     new Project { Title = "Weather App", Description = "Forecast weather using APIs", ImageUrl = "https://example.com/images/weather.png" }
-                }
             };
 
             // Create sample skills
             var skills = new List<Skill>
             {
                 new Skill { Name = "C#", Level = "Advanced" },
-                new Skill { Name = "Blazor", Level = "Intermediate" }
+                 new Skill { Name = "Blazor", Level = "Intermediate" }
             };
 
             _context.PortfolioUsers.Add(user);
+            _context.Projects.AddRange(projects);
             _context.Skills.AddRange(skills);
             _context.SaveChanges();
+
+            //create join entries between user and projects
+            var userProjects = projects.Select(project => new PortfolioUserProject{
+                portfolioUser = user,
+                PortfolioUserId = user.Id,
+                project = project,
+                projectId = project.Id
+            }).ToList();
+
 
             // Create join entries between user and skills
             var userSkills = skills.Select(skill => new PortfolioUserSkill
@@ -63,6 +74,7 @@ namespace SkillSnap_API.Controllers
             }).ToList();
 
             _context.PortfolioUserSkills.AddRange(userSkills);
+            _context.PortfolioUserProjects.AddRange(userProjects);
             _context.SaveChanges();
 
             return Ok("Sample data inserted successfully using join table relationships.");

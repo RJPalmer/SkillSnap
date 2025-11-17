@@ -130,7 +130,7 @@ namespace SkillSnap_API.Controllers
         {
             // Check that both the user and project exist.
             var user = await _context.PortfolioUsers
-                .Include(u => u.Projects)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -141,10 +141,15 @@ namespace SkillSnap_API.Controllers
                 return NotFound($"Project with ID {projectId} not found.");
             
             //Add the project to the user’s list of projects
-            if (user.Projects.Any(p => p.Id == projectId))
+            if (user.portfolioUserProjects.Any(p => p.projectId == projectId))
                 return Conflict($"Project with ID {projectId} is already attached to User {userId}.");
 
-            user.Projects.Add(project);
+            user.portfolioUserProjects.Add(new PortfolioUserProject{
+                portfolioUser = user,
+                PortfolioUserId = user.Id,
+                project = project,
+                projectId = project.Id
+            });
 
             await _context.SaveChangesAsync();
 
