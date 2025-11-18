@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Numerics;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using SkillSnap.Shared.DTOs;
 using SkillSnap.Shared.Models;
@@ -208,8 +209,8 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     {
         var joinEntry = new PortfolioUserProjectCreateDto
         {
-            PortfolioUserId = project.PortfolioUserId,
-            ProjectId = project.Id
+            PortfolioUserId = int.Parse(userId),
+            ProjectId = int.Parse(projectId)
         };
         var response = await _httpClient.PostAsJsonAsync($"api/project/attach", joinEntry);
         return response.IsSuccessStatusCode;
