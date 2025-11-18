@@ -57,10 +57,10 @@ namespace SkillSnap_API.Controllers
 
             //create join entries between user and projects
             var userProjects = projects.Select(project => new PortfolioUserProject{
-                portfolioUser = user,
+                PortfolioUser = user,
                 PortfolioUserId = user.Id,
-                project = project,
-                projectId = project.Id
+                Project = project,
+                ProjectId = project.Id
             }).ToList();
 
 

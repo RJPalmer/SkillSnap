@@ -29,7 +29,7 @@ public class SkillSnapDbContext : DbContext
         modelBuilder.Entity<Project>()
             .HasMany(pup => pup.portfolioUserProjects)
             .WithOne()
-            .HasForeignKey(p => p.projectId);
+            .HasForeignKey(p => p.ProjectId);
         modelBuilder.Entity<Skill>()
             .HasMany(s => s.SkillPortfolioUsers)
             .WithOne()
@@ -38,7 +38,7 @@ public class SkillSnapDbContext : DbContext
         modelBuilder.Entity<PortfolioUserSkill>()
             .HasKey(pus => new { pus.PortfolioUserId, pus.SkillId });
         modelBuilder.Entity<PortfolioUserProject>()
-            .HasKey(pup => new {pup.PortfolioUserId, pup.projectId});
+            .HasKey(pup => new {pup.PortfolioUserId, pup.ProjectId});
             
        
         

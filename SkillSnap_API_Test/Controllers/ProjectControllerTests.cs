@@ -93,17 +93,17 @@ namespace SkillSnap_API_Test.Controllers
             dbContext.Projects.Add(project);
             await dbContext.SaveChangesAsync();
             var controller = new ProjectController(dbContext);
-
+            var joinEntry = new PortfolioUserProjectCreateDto{PortfolioUserId = 1, ProjectId = 100};
             // Act
-            var attachResult = await controller.AttachProjectToUser(1, 100);
+            var attachResult = await controller.AttachProjectToUser(joinEntry);
 
             // Assert
             var updatedUser = await dbContext.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .FirstOrDefaultAsync(u => u.Id == 1);
 
             Assert.NotNull(updatedUser);
-            Assert.Contains(updatedUser.portfolioUserProjects, p => p.projectId == 100);
+            Assert.Contains(updatedUser.portfolioUserProjects, p => p.ProjectId == 100);
         }
 
         [Fact]

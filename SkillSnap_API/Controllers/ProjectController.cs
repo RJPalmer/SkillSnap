@@ -126,34 +126,34 @@ namespace SkillSnap_API.Controllers
         /// <param name="projectId"></param>
         /// <returns></returns>
         [HttpPost("attach")]
-        public async Task<IActionResult> AttachProjectToUser(int userId, int projectId)
+        public async Task<IActionResult> AttachProjectToUser([FromBody]PortfolioUserProjectCreateDto request)
         {
             // Check that both the user and project exist.
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
+                .FirstOrDefaultAsync(u => u.Id == request.PortfolioUserId);
 
             if (user == null)
-                return NotFound($"User with ID {userId} not found.");
+                return NotFound($"User with ID {request.PortfolioUserId} not found.");
 
-            var project = await _context.Projects.FindAsync(projectId);
+            var project = await _context.Projects.FindAsync(request.ProjectId);
             if (project == null)
-                return NotFound($"Project with ID {projectId} not found.");
+                return NotFound($"Project with ID {request.ProjectId} not found.");
             
             //Add the project to the user’s list of projects
-            if (user.portfolioUserProjects.Any(p => p.projectId == projectId))
-                return Conflict($"Project with ID {projectId} is already attached to User {userId}.");
+            if (user.portfolioUserProjects.Any(p => p.Project.Id == request.ProjectId))
+                return Conflict($"Project with ID {request.ProjectId} is already attached to User {request.PortfolioUserId}.");
 
             user.portfolioUserProjects.Add(new PortfolioUserProject{
-                portfolioUser = user,
+                PortfolioUser = user,
                 PortfolioUserId = user.Id,
-                project = project,
-                projectId = project.Id
+                Project = project,
+                ProjectId = project.Id
             });
 
             await _context.SaveChangesAsync();
 
-            return Ok($"Project {projectId} successfully attached to User {userId}.");
+            return Ok($"Project {request.ProjectId} successfully attached to User {request.PortfolioUserId}.");
         }
 
     }

@@ -23,22 +23,14 @@ namespace SkillSnap_API.Controllers
             _context = context;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="value"></param>
-        public PortfolioUserController(SkillSnapDbContext context, object value) : this(context)
-        {
-            this.value = value;
-        }
+
 
         // GET: api/PortfolioUser
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PortfolioUserDto>>> GetAll()
         {
             var users = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .Include(u => u.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .ToListAsync();
 
@@ -50,7 +42,7 @@ namespace SkillSnap_API.Controllers
                 ProfileImageUrl = u.ProfileImageUrl,
                 Projects = u.portfolioUserProjects.Select(p => new PortfolioUserProjectDto
                 {
-                    ProjectId = p.projectId,
+                    ProjectId = p.ProjectId,
                     PortfolioUserId = p.PortfolioUserId
                 }).ToList(),
 
@@ -75,7 +67,7 @@ namespace SkillSnap_API.Controllers
         public async Task<ActionResult<PortfolioUserDto>> GetById(int id)
         {
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .Include(u => u.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
@@ -92,10 +84,10 @@ namespace SkillSnap_API.Controllers
                 {
                     
                     Project = new ProjectDto{
-                        Id = p.projectId,
-                        Title = p.project.Title,
-                        Description = p.project.Description,
-                        ImageUrl = p.project.ImageUrl
+                        Id = p.ProjectId,
+                        Title = p.Project.Title,
+                        Description = p.Project.Description,
+                        ImageUrl = p.Project.ImageUrl
                     },
                     PortfolioUser = new PortfolioUserDto{
                         Id = user.Id,
@@ -104,7 +96,7 @@ namespace SkillSnap_API.Controllers
                         ProfileImageUrl = user.ProfileImageUrl
                     },
                     PortfolioUserId = p.PortfolioUserId,
-                    ProjectId = p.projectId
+                    ProjectId = p.ProjectId
                 }).ToList(),
                 PortfolioUserSkills = user.PortfolioUserSkills.Select(pus => new PortfolioUserSkillDto
                 {
@@ -127,7 +119,7 @@ namespace SkillSnap_API.Controllers
         public async Task<ActionResult<PortfolioUserDto>> GetByName(string name)
         {
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .Include(u => u.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .FirstOrDefaultAsync(u => u.Name == name);
 
@@ -150,10 +142,10 @@ namespace SkillSnap_API.Controllers
                         ProfileImageUrl = user.ProfileImageUrl
                     },
                     Project = new ProjectDto{
-                        Id = p.projectId,
-                        Title = p.project.Title,
-                        Description = p.project.Description,
-                        ImageUrl = p.project.ImageUrl
+                        Id = p.ProjectId,
+                        Title = p.Project.Title,
+                        Description = p.Project.Description,
+                        ImageUrl = p.Project.ImageUrl
                     }
                     }).ToList(),
                     PortfolioUserSkills = user.PortfolioUserSkills.Select(pus => new PortfolioUserSkillDto
@@ -177,7 +169,7 @@ namespace SkillSnap_API.Controllers
         public async Task<ActionResult<IEnumerable<ProjectDto>>> GetUserProjects(int id)
         {
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -185,10 +177,10 @@ namespace SkillSnap_API.Controllers
 
             var projectDtos = user.portfolioUserProjects.Select(p => new ProjectDto
             {
-                Id = p.projectId,
-                Title = p.project.Title,
-                Description =  p.project.Description,
-                ImageUrl =  p.project.ImageUrl,
+                Id = p.ProjectId,
+                Title = p.Project.Title,
+                Description =  p.Project.Description,
+                ImageUrl =  p.Project.ImageUrl,
                 PortfolioUserId =  p.PortfolioUserId
             });
 
@@ -356,7 +348,7 @@ namespace SkillSnap_API.Controllers
                 Projects = user.portfolioUserProjects.Select(p => new PortfolioUserProjectDto
                 {
                     PortfolioUserId =  p.PortfolioUserId,
-                    ProjectId = p.projectId
+                    ProjectId = p.ProjectId
                 }).ToList(),
                 PortfolioUserSkills = user.PortfolioUserSkills.Select(pus => new PortfolioUserSkillDto
                 {
@@ -382,7 +374,7 @@ namespace SkillSnap_API.Controllers
                 return BadRequest(ModelState);
 
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.project)
+                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
                 .Include(u => u.PortfolioUserSkills).ThenInclude(pus => pus.Skill)
                 .FirstOrDefaultAsync(u => u.Id == id);
 

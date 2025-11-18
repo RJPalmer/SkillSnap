@@ -80,7 +80,7 @@ else
         <option disabled value="">-- Select a project --</option>
         @foreach (var project in availableProjects)
         {
-            <option value="@project.Id">@project.Title</option>
+            <option selected="selected" value="@project.Id">@project.Title</option>
         }
     </select>
     <button class="btn btn-success me-2" @onclick="AttachProject">Attach</button>
@@ -217,7 +217,7 @@ else
         if (!string.IsNullOrEmpty(selectedProjectId))
         {
             var linkedSuccessfully = await ApiClient.PatchProjectAsync(
-                selectedProjectId, new ProjectDto { PortfolioUserId = int.Parse(userId),
+                selectedProjectId, userId, new ProjectDto { PortfolioUserId = int.Parse(userId),
                 Description = string.Empty,
                 ImageUrl= string.Empty,Title = string.Empty });
 

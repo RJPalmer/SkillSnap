@@ -35,7 +35,7 @@ public interface ISkillSnapApiClient
     Task<IEnumerable<ProjectDto>> GetAllProjectsAsync();
     Task<IEnumerable<SkillDto>> GetAllSkillsAsync();
 
-    Task<bool> PatchProjectAsync(string projectId, ProjectDto project);
+    Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project);
     Task<bool> PatchSkillAsync(string skillId, SkillDto skill);
     Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile);
     Task<bool> UpdateUserSkillsAsync(IEnumerable<string> skills);
@@ -204,9 +204,14 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         => _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/skill")!;
 
     // ---------- PATCH SUPPORT ----------
-    public async Task<bool> PatchProjectAsync(string projectId, ProjectDto project)
+    public async Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project)
     {
-        var response = await _httpClient.PatchAsJsonAsync($"api/project/{projectId}", project);
+        var joinEntry = new PortfolioUserProjectCreateDto
+        {
+            PortfolioUserId = project.PortfolioUserId,
+            ProjectId = project.Id
+        };
+        var response = await _httpClient.PostAsJsonAsync($"api/project/attach", joinEntry);
         return response.IsSuccessStatusCode;
     }
 
