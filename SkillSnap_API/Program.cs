@@ -3,10 +3,14 @@ using SkillSnap.Shared.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using SkillSnap_API.Data;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddDbContext<SkillSnapDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("SkillSnapDbContext") ?? throw new InvalidOperationException("Connection string 'SkillSnapDbContext' not found.")));
+
+builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<SkillSnapDbContext>();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -54,6 +58,20 @@ builder.Services.AddControllers()
         };
     });
 
+//Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+   options.Password.RequiredLength = 6;
+   options.User.RequireUniqueEmail = true; 
+})
+.AddEntityFrameworkStores<SkillSnapDbContext>()
+.AddDefaultTokenProviders();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+});
 // Configure DbContext with connection string from appsettings.json
 builder.Services.AddDbContext<SkillSnapDbContext>(options =>
     options.UseSqlite(
@@ -70,6 +88,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("BlazorClient");
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseHttpsRedirection();
 app.MapControllers();
 

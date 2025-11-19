@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillSnap_API.Data;
 
@@ -10,9 +11,11 @@ using SkillSnap_API.Data;
 namespace SkillSnap_API.Migrations
 {
     [DbContext(typeof(SkillSnapDbContext))]
-    partial class SkillSnapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251118175755_AddIdentityTables")]
+    partial class AddIdentityTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.11");
@@ -215,9 +218,6 @@ namespace SkillSnap_API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Bio")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -231,9 +231,6 @@ namespace SkillSnap_API.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId")
-                        .IsUnique();
 
                     b.ToTable("PortfolioUsers");
                 });
@@ -383,15 +380,6 @@ namespace SkillSnap_API.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
-                {
-                    b.HasOne("SkillSnap.Shared.Models.ApplicationUser", "ApplicationUser")
-                        .WithOne()
-                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId");
-
-                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUserProject", b =>

@@ -19,6 +19,10 @@ public class PortfolioUser
 
     public string? ProfilePictureUrl => ProfileImageUrl;
 
+    public string? ApplicationUserId {get; set;} = string.Empty;
+
+    public ApplicationUser? ApplicationUser{get; set;} = new ApplicationUser();
+
     public ICollection<PortfolioUserProject> portfolioUserProjects{ get; set; } = new List<PortfolioUserProject>();
 
    public ICollection<PortfolioUserSkill> PortfolioUserSkills { get; set; } = new List<PortfolioUserSkill>();

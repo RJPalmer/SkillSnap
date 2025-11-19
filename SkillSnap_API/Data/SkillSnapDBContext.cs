@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using SkillSnap.Shared.Models;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.General;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using SQLitePCL;
 
 namespace SkillSnap_API.Data;
 
-public class SkillSnapDbContext : DbContext
+public class SkillSnapDbContext : IdentityDbContext<ApplicationUser>
 {
     // Constructor
     public SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : base(options)
@@ -26,6 +30,10 @@ public class SkillSnapDbContext : DbContext
             .WithOne()
             .HasForeignKey(pus => pus.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PortfolioUser>()
+            .HasOne(p => p.ApplicationUser)
+            .WithOne()
+            .HasForeignKey<PortfolioUser>(p => p.ApplicationUserId);
         modelBuilder.Entity<Project>()
             .HasMany(pup => pup.portfolioUserProjects)
             .WithOne()
