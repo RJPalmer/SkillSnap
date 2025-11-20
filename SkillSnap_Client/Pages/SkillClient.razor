@@ -1,8 +1,10 @@
 @page "/skill-client"
+@using Microsoft.AspNetCore.Authorization
 @inject HttpClient Http
 @inject ILogger<SkillClient> Logger
 @inject ISkillSnapApiClient ApiClient
 
+@attribute [Authorize]
 <h3>Skill Client Page</h3>
 <p>Welcome to the Skill Client page!</p>
 

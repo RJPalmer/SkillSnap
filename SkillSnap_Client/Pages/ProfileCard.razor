@@ -1,4 +1,5 @@
 @page "/profile-card"
+@using Microsoft.AspNetCore.Authorization
 @using SkillSnap.Shared.Models
 @using SkillSnap.Shared.DTOs
 @using SkillSnap_Client.Services
@@ -6,8 +7,15 @@
 @inject ISkillSnapApiClient ApiClient
 @inject ILogger<ProfileCard> Logger
 
-<h3>User Profile</h3>
+@inject AuthenticationStateProvider AuthStateProvider
 
+@attribute [Authorize]
+
+<h3>User Profile</h3>
+<AuthorizeView>
+    <Authorized>
+        <p>Welcome, @context.User.Identity!.Name</p>
+   
 <div class="profile-card">
     <img src="@GetProfileImage()" alt="Profile picture of @(editableProfile?.Name ?? userProfile?.Name ?? "Loading...")" class="profile-picture" />
 
@@ -42,7 +50,11 @@
         </div>
     }
 </div>
-
+ </Authorized>
+    <NotAuthorized>
+        <p>Please log in to view this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
 @if (errorMessage != null)
 {
     <p class="error">@errorMessage</p>
