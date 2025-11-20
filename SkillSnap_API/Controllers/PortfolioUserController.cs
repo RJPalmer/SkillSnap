@@ -12,7 +12,7 @@ namespace SkillSnap_API.Controllers
     public class PortfolioUserController : ControllerBase
     {
         private readonly SkillSnapDbContext _context;
-        private object value;
+        //private object value;
 
         /// <summary>
         /// 

@@ -18,9 +18,14 @@ public class JwtTokenService
 
     public string GenerateToken(ApplicationUser user)
     {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
-        );
+                var rawKey = _config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(rawKey))
+            throw new Exception("JWT signing key is missing from configuration (Jwt:Key).");
+        var keyBytes = Encoding.UTF8.GetBytes(rawKey);
+        if (keyBytes.Length < 32)
+            throw new Exception($"JWT signing key is too short. HS256 requires at least 256 bits (32 characters). Current key length: {keyBytes.Length} bytes.");
+
+        var key = new SymmetricSecurityKey(keyBytes);
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

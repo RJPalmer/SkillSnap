@@ -12,6 +12,7 @@
     <NotAuthorized>
         <!-- When the user is NOT authenticated -->
         <button @onclick="Login">Login</button>
+        <button @onclick="Register">Register</button>
     </NotAuthorized>
 </AuthorizeView>
 
@@ -26,5 +27,9 @@
         await TokenService.RemoveTokenAsync();
         ((ApiAuthenticationStateProvider)AuthStateProvider).NotifyUserLogout();
         Nav.NavigateTo("/authentication");
+    }
+
+    private async Task Register(){
+       Nav.NavigateTo("/register");
     }
 }
