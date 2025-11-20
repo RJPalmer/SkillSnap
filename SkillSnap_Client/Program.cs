@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using System.Net.Http.Json;
 using SkillSnap_Client;
 using SkillSnap_Client.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -28,5 +29,21 @@ builder.Services.AddHttpClient<ISkillSnapApiClient, SkillSnapApiClient>(client =
 //     builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
 //     options.ProviderOptions.DefaultAccessTokenScopes.Add($"{authentication["ClientId"]}/.default");
 // });
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ApiAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => 
+    sp.GetRequiredService<ApiAuthenticationStateProvider>());
+
+builder.Services.AddTransient<AuthTokenHandler>();
+builder.Services.AddHttpClient("SkillSnapAPI", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7271");
+})
+.AddHttpMessageHandler<AuthTokenHandler>();
+
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("SkillSnapAPI"));
 
 await builder.Build().RunAsync();

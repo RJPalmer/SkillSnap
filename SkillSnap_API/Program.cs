@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using SkillSnap.Shared.Models;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
 using SkillSnap_API.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,23 +9,28 @@ using SkillSnap_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --------------------------
+// Configure DbContext
+// --------------------------
 builder.Services.AddDbContext<SkillSnapDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("SkillSnapDbContext") ?? throw new InvalidOperationException("Connection string 'SkillSnapDbContext' not found.")));
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<SkillSnapDbContext>();
-
-builder.WebHost.ConfigureKestrel(options =>
+// --------------------------
+// Configure Identity
+// --------------------------
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    options.ListenLocalhost(7271, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
-    options.ListenLocalhost(5169);
-}); 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+    options.Password.RequiredLength = 6;
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<SkillSnapDbContext>()
+.AddDefaultTokenProviders();
 
+// --------------------------
+// Configure JWT Authentication
+// --------------------------
 builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddAuthentication(options =>
@@ -43,7 +46,6 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
@@ -52,73 +54,70 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Add CORS policy for Blazor WASM client
+// --------------------------
+// Configure CORS for Blazor client
+// --------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:7053") // Update with your Blazor client URL
+        policy.WithOrigins("https://localhost:7053") // Update to your Blazor client URL
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
 
-// Add controllers
+// --------------------------
+// Add Controllers & Configure ModelState logging
+// --------------------------
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
         var builtInFactory = options.InvalidModelStateResponseFactory;
-
         options.InvalidModelStateResponseFactory = context =>
         {
-            // Custom behavior can be added here
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("Invalid model state detected.");
-            logger.LogInformation("Request details: {RequestDetails}", context.HttpContext.Request);
-            logger.LogDebug("Request body: {RequestBody}", context.HttpContext.Request.Body);
-            logger.LogTrace("Request headers: {RequestHeaders}", context.HttpContext.Request.Headers);
-            logger.LogCritical("Critical error occurred.");
-            logger.LogError("An error occurred while processing the request.");
-            logger.LogDebug("Debugging information: {DebugInfo}", context.HttpContext.Request);
+            var request = context.HttpContext.Request;
 
-            // Fallback to the built-in behavior
+            logger.LogWarning("Invalid model state detected for request {Method} {Path}", request.Method, request.Path);
+            logger.LogDebug("Request headers: {Headers}", request.Headers);
+
             return builtInFactory(context);
         };
     });
 
-//Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-{
-   options.Password.RequiredLength = 6;
-   options.User.RequireUniqueEmail = true; 
-})
-.AddEntityFrameworkStores<SkillSnapDbContext>()
-.AddDefaultTokenProviders();
+// --------------------------
+// Add OpenAPI / Swagger
+// --------------------------
+builder.Services.AddOpenApi();
 
-builder.Services.AddAuthentication(options =>
+// --------------------------
+// Configure Kestrel
+// --------------------------
+builder.WebHost.ConfigureKestrel(options =>
 {
-    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+    options.ListenLocalhost(7271, listenOptions =>
+    {
+        listenOptions.UseHttps();
+    });
+    options.ListenLocalhost(5169);
 });
-// Configure DbContext with connection string from appsettings.json
-builder.Services.AddDbContext<SkillSnapDbContext>(options =>
-    options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."))
-);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// --------------------------
+// Configure HTTP pipeline
+// --------------------------
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseCors("BlazorClient");
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
+
 app.MapControllers();
 
 app.Run();
