@@ -21,3 +21,6 @@ SkillSnap_Shared/obj/
 
 # Ignore published builds
 publish/
+SkillSnap_API/skillsnap.db
+SkillSnap_API/skillsnap.db-shm
+SkillSnap_API/skillsnap.db-wal

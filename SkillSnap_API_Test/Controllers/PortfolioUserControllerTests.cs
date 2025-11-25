@@ -79,7 +79,7 @@ namespace SkillSnap_API_Test.Controllers
             // Assert
             Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(result);
             var updated = await dbContext.PortfolioUsers.FindAsync(1);
-            Assert.Equal("Updated Name", updated.Name);
+            Assert.Equal("Updated Name", updated!.Name);
         }
 
         [Fact]

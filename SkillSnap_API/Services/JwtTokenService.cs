@@ -18,7 +18,7 @@ public class JwtTokenService
 
     public string GenerateToken(ApplicationUser user)
     {
-                var rawKey = _config["Jwt:Key"];
+        var rawKey = _config["Jwt:Key"];
         if (string.IsNullOrWhiteSpace(rawKey))
             throw new Exception("JWT signing key is missing from configuration (Jwt:Key).");
         var keyBytes = Encoding.UTF8.GetBytes(rawKey);
@@ -29,12 +29,17 @@ public class JwtTokenService
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim(ClaimTypes.NameIdentifier, user.Id)
-        };
+       var claims = new List<Claim>
+{
+    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+    new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+    new Claim(ClaimTypes.NameIdentifier, user.Id)
+};
+
+if (user.PortfolioUser != null)
+{
+    claims.Add(new Claim("portfolioUserId", user.PortfolioUser.Id.ToString()));
+}
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
@@ -48,4 +53,4 @@ public class JwtTokenService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-}   
+}

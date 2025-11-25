@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillSnap_API.Data;
 
@@ -10,9 +11,11 @@ using SkillSnap_API.Data;
 namespace SkillSnap_API.Migrations
 {
     [DbContext(typeof(SkillSnapDbContext))]
-    partial class SkillSnapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121180732_AddPortfolioUserIdToApplicationUser")]
+    partial class AddPortfolioUserIdToApplicationUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.11");

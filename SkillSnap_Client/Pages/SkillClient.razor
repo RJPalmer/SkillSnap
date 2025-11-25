@@ -1,171 +1,138 @@
 @page "/skill-client"
 @using Microsoft.AspNetCore.Authorization
-@inject HttpClient Http
+@using SkillSnap.Shared.DTOs
 @inject ILogger<SkillClient> Logger
+@inject UserContext UserContext
 @inject ISkillSnapApiClient ApiClient
 
 @attribute [Authorize]
+
 <h3>Skill Client Page</h3>
-<p>Welcome to the Skill Client page!</p>
 
-<div class="mb-3">
-    @if (!isEditing)
-    {
-        <button class="btn btn-warning" @onclick="EnableEditing">✎ Edit Skills</button>
-    }
-    else
-    {
-        <button class="btn btn-success me-2" @onclick="SaveSkills">✔ Done</button>
-        <button class="btn btn-secondary" @onclick="CancelEditing">✖ Cancel</button>
-    }
-</div>
+<AuthorizeView>
+    <Authorized>
+        <p>Welcome @UserContext.CurrentPortfolioUser?.Name!</p>
 
-<div class="skill-list">
-    @if (isLoading)
-    {
-        <p>Loading skills...</p>
-    }
-    else if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <p class="text-danger">@errorMessage</p>
-        <button class="btn btn-primary" @onclick="LoadSkills">Retry</button>
-    }
-    else if (skills is not null && skills.Any())
-    {
-        <ul class="list-unstyled">
-            @for (int i = 0; i < skills.Count; i++)
+        <div class="mb-3">
+            @if (!isEditing)
             {
-                <li class="mb-2">
-                    @if (isEditing)
-                    {
-                        <input type="text" class="form-control d-inline w-auto" @bind="skills[i]" />
-                    }
-                    else
-                    {
-                        @skills[i]
-                    }
-                </li>
+                <button class="btn btn-warning" @onclick="EnableEditing">✎ Edit Skills</button>
             }
-        </ul>
+            else
+            {
+                <button class="btn btn-success me-2" @onclick="SaveSkills">✔ Done</button>
+                <button class="btn btn-secondary" @onclick="CancelEditing">✖ Cancel</button>
+            }
+        </div>
 
-        @if (isEditing)
-        {
-            <div class="mt-3">
-                <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add new skill..." @bind="newSkill" />
-                <button class="btn btn-primary" @onclick="AddSkill">+ Add</button>
-            </div>
-        }
-    }
-    else
+        <div class="skill-list">
+            @if (isLoading)
+            {
+                <p>Loading skills...</p>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="text-danger">@errorMessage</p>
+                <button class="btn btn-primary" @onclick="LoadSkills">Retry</button>
+            }
+            else if (editableSkills != null && editableSkills.Any())
+            {
+                <ul class="list-unstyled">
+                    @for (int i = 0; i < editableSkills.Count; i++)
+                    {
+                        <li class="mb-2">
+                            @if (isEditing)
+                            {
+                                <input type="text" class="form-control d-inline w-auto" @bind="editableSkills[i]" />
+                            }
+                            else
+                            {
+                                @editableSkills[i]
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (isEditing)
+                {
+                    <div class="mt-3">
+                        <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add new skill..."
+                               @bind="newSkill" />
+                        <button class="btn btn-primary" @onclick="AddSkill">+ Add</button>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>No skills found</p>
+
+                @if (isEditing)
+                {
+                    <div class="mt-3">
+                        <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add your first skill..."
+                               @bind="newSkill" />
+                        <button class="btn btn-primary" @onclick="AddSkill">+ Add Skill</button>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-outline-primary mt-2" @onclick="EnableEditing">Add your first skill</button>
+                }
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>Please log in to view this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<string> editableSkills = new List<string>();
+    private string? newSkill = string.Empty;
+    private bool isEditing = false;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override void OnInitialized()
     {
-        <p>No skills found</p>
+        LoadSkillsFromUserContext();
+    }
 
-        @if (isEditing)
+    private void LoadSkillsFromUserContext()
+    {
+        if (UserContext.CurrentPortfolioUser?.PortfolioUserSkills != null)
         {
-            <div class="mt-3">
-                <input type="text" class="form-control d-inline w-auto me-2" placeholder="Add your first skill..."
-                    @bind="newSkill" />
-                <button class="btn btn-primary" @onclick="AddSkill">+ Add Skill</button>
-            </div>
+            editableSkills = UserContext.CurrentPortfolioUser.PortfolioUserSkills.Select(s => s.Skill!.Name ?? string.Empty).ToList();
         }
         else
         {
-            <button class="btn btn-outline-primary mt-2" @onclick="EnableEditing">Add your first skill</button>
+            editableSkills = new List<string>();
         }
-    }
-</div>
 
-@code {
-
-    /// <summary>k
-    /// List of skills fetched from the API
-    /// </summary>
-    private List<string>? skills;
-
-    /// <summary>
-    /// Indicates if skills are being loaded
-    /// </summary>
-    private bool isLoading = true;
-
-    /// <summary>
-    /// Error message to display if skill loading fails
-    /// </summary>
-    private string? errorMessage;
-
-    /// <summary>
-    /// Indicates editing mode
-    /// </summary>
-    private bool isEditing = false;
-
-    /// <summary>
-    /// A new skill to be added by the user
-    /// </summary>
-    private string? newSkill = string.Empty;
-
-    /// <summary>
-    /// Fetch skills from API on initialization
-    /// </summary>
-    /// <returns></returns>
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            isLoading = true;
-
-            // Example API call — adjust endpoint as needed
-            IEnumerable<SkillDto>? response = await ApiClient.GetUserSkillsAsync();
-
-            if (response != null)
-            {
-                var result = response.Select(s => s.Name).ToList();
-                skills = result ?? new List<string>();
-            }
-            else if (response == null || !response.Any())
-            {
-                errorMessage = $"Failed to fetch skills (Status: No data returned)";
-                Logger.LogWarning("No skills returned from API. Response was null.");
-                
-                skills = new List<string>();
-                isEditing = true; // start edit mode automatically
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error fetching skills: {ex.Message}";
-            Logger.LogError(ex, "Exception occurred while fetching skills");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    /// <summary>
-    /// Reload skills on button click
-    /// </summary>
-    /// <returns></returns>
-    private async Task LoadSkills()
-    {
-        await OnInitializedAsync();
+        isLoading = false;
+        errorMessage = null;
     }
 
     private void EnableEditing()
     {
         isEditing = true;
+        LoadSkillsFromUserContext();
+        newSkill = string.Empty;
     }
 
     private void CancelEditing()
     {
         isEditing = false;
+        LoadSkillsFromUserContext();
         newSkill = string.Empty;
+        errorMessage = null;
     }
 
     private void AddSkill()
     {
         if (!string.IsNullOrWhiteSpace(newSkill))
         {
-            skills ??= new List<string>();
-            skills.Add(newSkill.Trim());
+            editableSkills.Add(newSkill.Trim());
             newSkill = string.Empty;
         }
     }
@@ -174,20 +141,75 @@
     {
         try
         {
-            if (skills != null)
+            if (editableSkills != null)
             {
-                bool result = await ApiClient.UpdateUserSkillsAsync(skills);
-                if(result)
+                bool result = await ApiClient.UpdateUserSkillsAsync(editableSkills);
+                if (result)
+                {
                     Logger.LogInformation("Skills updated successfully.");
+
+                    // Update UserContext.CurrentUser.PortfolioUserSkills to reflect changes
+                    UserContext.CurrentPortfolioUser!.PortfolioUserSkills = editableSkills
+                        .Select(s => new PortfolioUserSkillDto { Skill = new SkillDto{Name = s, Level = "Beginner"} })
+                        .ToList();
+
+                    isEditing = false;
+                    errorMessage = null;
+                }
                 else
-                    Logger.LogError(message:"Unable to update skills.");
+                {
+                    errorMessage = "Unable to update skills.";
+                    Logger.LogError(errorMessage);
+                }
             }
-            isEditing = false;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error saving skills.");
             errorMessage = "Failed to save skills.";
+        }
+    }
+
+    private async Task LoadSkills()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            IEnumerable<SkillDto>? response = await ApiClient.GetUserSkillsAsync();
+            if (response != null)
+            {
+                // Map SkillDto -> PortfolioUserSkillDto so the UserContext keeps the expected shape
+                UserContext.CurrentPortfolioUser!.PortfolioUserSkills = response
+                    .Select(s => new PortfolioUserSkillDto
+                    {
+                        SkillId = s.Id,
+                        PortfolioUserId = UserContext.CurrentPortfolioUser!.Id,
+                        Skill = new SkillDto
+                        {
+                            Id = s.Id,
+                            Name = s.Name,
+                            Level = s.Level
+                        }
+                    })
+                    .ToList();
+
+                editableSkills = response.Select(s => s.Name ?? string.Empty).ToList();
+            }
+            else
+            {
+                editableSkills = new List<string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching skills.");
+            errorMessage = "Failed to load skills.";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 }

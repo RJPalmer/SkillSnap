@@ -34,7 +34,7 @@
         try
         {
             var loginDto = new { Email = email, Password = password };
-            var response = await Http.PostAsJsonAsync("api/account/login", loginDto);
+                var response = await Http.PostAsJsonAsync("api/account/login", loginDto);
 
             if (!response.IsSuccessStatusCode)
             {

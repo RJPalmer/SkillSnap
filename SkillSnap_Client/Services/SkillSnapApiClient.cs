@@ -1,69 +1,95 @@
 using System.Net.Http.Json;
-using System.Numerics;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using SkillSnap.Shared.DTOs;
 using SkillSnap.Shared.Models;
 
 namespace SkillSnap_Client.Services;
 
-/// <summary>
-/// SkillSnap API Client Interface
-/// </summary>
 public interface ISkillSnapApiClient
 {
+    // User Profile
     Task<PortfolioUserDto?> GetUserProfileAsync();
-    Task<IEnumerable<ProjectDto>> GetUserProjectsAsync();
-    Task<IEnumerable<SkillDto>> GetUserSkillsAsync();
-
-    Task<ProjectDto?> RemoveProjectById(string projectId);
-    Task<ProjectDto?> GetProjectByIdAsync(string projectId);
-    Task<ProjectDto?> CreateProjectAsync(ProjectDto project);
-    Task<bool> UpdateProjectAsync(string projectId, ProjectDto project);
-    Task<bool> DeleteProjectAsync(string projectId);
-
-    Task<SkillDto?> AddSkillAsync(SkillDto skill);
-    Task<bool> RemoveSkillAsync(string skillId);
-    Task<bool> UpdateSkillAsync(string skillId, SkillDto skill);
-    Task<SkillDto?> GetSkillByIdAsync(string skillId);
-
+    Task<PortfolioUserDto?> GetUserProfileByIdAsync(string userId);
     Task<PortfolioUserDto?> CreateUserProfileAsync(PortfolioUserDto userProfile);
     Task<bool> UpdateUserProfileAsync(string userId, PortfolioUserDto userProfile);
     Task<bool> DeleteUserProfileAsync(string userId);
-    Task<PortfolioUserDto?> GetUserProfileByIdAsync(string userId);
+    Task<PortfolioUserDto?> CreatePortfolioUserAsync(PortfolioUserCreateDto userProfile);
 
+    // Projects
+    Task<IEnumerable<ProjectDto>> GetUserProjectsAsync();
     Task<IEnumerable<ProjectDto>> GetProjectsByUserIdAsync(string userId);
-    Task<IEnumerable<SkillDto>> GetSkillsByUserIdAsync(string userId);
     Task<IEnumerable<ProjectDto>> GetAllProjectsAsync();
-    Task<IEnumerable<SkillDto>> GetAllSkillsAsync();
+    Task<ProjectDto?> GetProjectByIdAsync(string projectId);
+    Task<ProjectDto?> CreateProjectAsync(ProjectDto project);
+    Task<bool> UpdateProjectAsync(string projectId, ProjectDto dto);
+    Task<bool> DeleteProjectAsync(string projectId);
+    Task<ProjectDto?> RemoveProjectById(string projectId);
 
+    // Skills
+    Task<IEnumerable<SkillDto>> GetUserSkillsAsync();
+    Task<IEnumerable<SkillDto>> GetSkillsByUserIdAsync(string userId);
+    Task<IEnumerable<SkillDto>> GetAllSkillsAsync();
+    Task<SkillDto?> GetSkillByIdAsync(string skillId);
+    Task<SkillDto?> AddSkillAsync(SkillDto skill);
+    Task<bool> UpdateSkillAsync(string skillId, SkillDto skill);
+    Task<bool> RemoveSkillAsync(string skillId);
+
+    // Patch Support
     Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project);
     Task<bool> PatchSkillAsync(string skillId, SkillDto skill);
     Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile);
+
+    // User Skills
     Task<bool> UpdateUserSkillsAsync(IEnumerable<string> skills);
 }
 
-/// <summary>
-/// SkillSnap API Client Implementation
-/// </summary>
 public class SkillSnapApiClient : ISkillSnapApiClient
 {
     private readonly HttpClient _httpClient;
+    private readonly UserContext _userContext;
     private readonly ILogger<SkillSnapApiClient> _logger;
 
-    public SkillSnapApiClient(HttpClient httpClient, ILogger<SkillSnapApiClient> logger)
+    public SkillSnapApiClient(HttpClient httpClient, ILogger<SkillSnapApiClient> logger, UserContext userContext)
     {
         _httpClient = httpClient;
-        _httpClient.BaseAddress = new Uri("https://localhost:7271/");
         _logger = logger;
+        _userContext = userContext;
     }
 
-    // ---------- USER PROFILE ----------
+    // ---------------------------
+    // USER PROFILES
+    //---------------------------
+
     public async Task<PortfolioUserDto?> GetUserProfileAsync()
     {
         try
         {
-            var userProfile = await _httpClient.GetFromJsonAsync<PortfolioUserDto>("api/portfoliouser/1");
-            return userProfile ?? throw new Exception("User profile not found");
+            var id = _userContext.CurrentPortfolioUser?.Id;
+            if (id is null)
+            {
+                _logger.LogWarning("GetUserProfileAsync called without a loaded PortfolioUser.");
+                return null;
+            }
+
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{id}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetUserProfileAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return null;
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<PortfolioUserDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize PortfolioUserDto. Response body: {Body}", body);
+                return null;
+            }
         }
         catch (AccessTokenNotAvailableException ex)
         {
@@ -81,11 +107,37 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<PortfolioUserDto>($"api/portfoliouser/{userId}");
+            // Ensure userId is parsed as int; if not valid, return null early
+            if (!int.TryParse(userId, out var userIdInt))
+            {
+                _logger.LogWarning("GetUserProfileByIdAsync called with invalid userId format: {UserId}", userId);
+                return null;
+            }
+
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{userIdInt}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetUserProfileByIdAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return null;
+            }
+
+            // Try to parse JSON; if parsing fails, log the body for diagnosis and return null
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<PortfolioUserDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize PortfolioUserDto. Response body: {Body}", body);
+                return null;
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error fetching user profile {userId}");
+            _logger.LogError(ex, "Error fetching user profile by ID");
             throw;
         }
     }
@@ -96,6 +148,7 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         {
             var response = await _httpClient.PostAsJsonAsync("api/portfoliouser", userProfile);
             response.EnsureSuccessStatusCode();
+
             return await response.Content.ReadFromJsonAsync<PortfolioUserDto>();
         }
         catch (Exception ex)
@@ -117,13 +170,60 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         return response.IsSuccessStatusCode;
     }
 
-    // ---------- PROJECTS ----------
+    public async Task<PortfolioUserDto?> CreatePortfolioUserAsync(PortfolioUserCreateDto userProfile)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/portfoliouser", userProfile);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Error creating portfolio user: {Status}", response.StatusCode);
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<PortfolioUserDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating portfolio user");
+            throw;
+        }
+    }
+
+    // ---------------------------
+    // PROJECTS
+    //---------------------------
+
     public async Task<IEnumerable<ProjectDto>> GetUserProjectsAsync()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/portfoliouser/1/projects")
-                   ?? Array.Empty<ProjectDto>();
+            int? userId = _userContext.CurrentPortfolioUser?.Id;
+            if (userId is null)
+            {
+                _logger.LogWarning("GetUserProjectsAsync called without a loaded user.");
+                return Array.Empty<ProjectDto>();
+            }
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{userId}/projects");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetUserProjectsAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<ProjectDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<ProjectDto>>() ?? Array.Empty<ProjectDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize ProjectDto list. Response body: {Body}", body);
+                return Array.Empty<ProjectDto>();
+            }
         }
         catch (Exception ex)
         {
@@ -134,84 +234,302 @@ public class SkillSnapApiClient : ISkillSnapApiClient
 
     public async Task<ProjectDto?> GetProjectByIdAsync(string projectId)
     {
-        var response = await _httpClient.GetAsync($"api/project/{projectId}");
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<ProjectDto>();
+        if (!int.TryParse(projectId, out var projectIdInt))
+        {
+            _logger.LogWarning("GetProjectByIdAsync called with invalid projectId format: {ProjectId}", projectId);
+            return null;
+        }
+
+        var response = await _httpClient.GetAsync($"api/project/{projectIdInt}");
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<ProjectDto>()
+            : null;
     }
 
-    public async Task<ProjectDto?> CreateProjectAsync(ProjectDto newProject)
+    public async Task<ProjectDto?> CreateProjectAsync(ProjectDto project)
     {
-        var response = await _httpClient.PostAsJsonAsync("api/project", newProject);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<ProjectDto>() : null;
+        var response = await _httpClient.PostAsJsonAsync("api/project", project);
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<ProjectDto>()
+            : null;
     }
 
-    public async Task<bool> UpdateProjectAsync(string projectId, ProjectDto project)
+    public async Task<bool> UpdateProjectAsync(string projectId, ProjectDto dto)
     {
-        var response = await _httpClient.PutAsJsonAsync($"api/project/{projectId}", project);
+        if (!int.TryParse(projectId, out var projectIdInt))
+        {
+            _logger.LogWarning("UpdateProjectAsync called with invalid projectId format: {ProjectId}", projectId);
+            return false;
+        }
+
+        var response = await _httpClient.PutAsJsonAsync($"api/project/{projectIdInt}", dto);
         return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> DeleteProjectAsync(string projectId)
     {
-        var response = await _httpClient.DeleteAsync($"api/project/{projectId}");
+        if (!int.TryParse(projectId, out var projectIdInt))
+        {
+            _logger.LogWarning("DeleteProjectAsync called with invalid projectId format: {ProjectId}", projectId);
+            return false;
+        }
+
+        var response = await _httpClient.DeleteAsync($"api/project/{projectIdInt}");
         return response.IsSuccessStatusCode;
     }
 
     public Task<ProjectDto?> RemoveProjectById(string projectId)
-        => GetProjectByIdAsync(projectId); // placeholder (can call DELETE if preferred)
+        => GetProjectByIdAsync(projectId);
 
-    public Task<IEnumerable<ProjectDto>> GetProjectsByUserIdAsync(string userId)
-        => _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>($"api/portfoliouser/{userId}/projects")!;
+    public async Task<IEnumerable<ProjectDto>> GetProjectsByUserIdAsync(string userId)
+    {
+        try
+        {
+            if (!int.TryParse(userId, out var userIdInt))
+            {
+                _logger.LogWarning("GetProjectsByUserIdAsync called with invalid userId format: {UserId}", userId);
+                return Array.Empty<ProjectDto>();
+            }
 
-    public Task<IEnumerable<ProjectDto>> GetAllProjectsAsync()
-        => _httpClient.GetFromJsonAsync<IEnumerable<ProjectDto>>("api/project")!;
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{userIdInt}/projects");
 
-    // ---------- SKILLS ----------
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetProjectsByUserIdAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<ProjectDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<ProjectDto>>() ?? Array.Empty<ProjectDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize ProjectDto list. Response body: {Body}", body);
+                return Array.Empty<ProjectDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching projects by user id");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<ProjectDto>> GetAllProjectsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/project");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetAllProjectsAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<ProjectDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<ProjectDto>>() ?? Array.Empty<ProjectDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize ProjectDto list. Response body: {Body}", body);
+                return Array.Empty<ProjectDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all projects");
+            throw;
+        }
+    }
+
+    // ---------------------------
+    // SKILLS
+    //---------------------------
+
     public async Task<IEnumerable<SkillDto>> GetUserSkillsAsync()
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/portfoliouser/1/skills")
-               ?? Array.Empty<SkillDto>();
+        int? id = _userContext.CurrentPortfolioUser?.Id;
+
+        if (id is null)
+        {
+            _logger.LogWarning("GetUserSkillsAsync called without a loaded PortfolioUser.");
+            return Array.Empty<SkillDto>();
+        }
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{id}/skills");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetUserSkillsAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<SkillDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<SkillDto>>() ?? Array.Empty<SkillDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize SkillDto list. Response body: {Body}", body);
+                return Array.Empty<SkillDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching user skills");
+            return Array.Empty<SkillDto>();
+        }
     }
 
     public async Task<SkillDto?> GetSkillByIdAsync(string skillId)
     {
-        var response = await _httpClient.GetAsync($"api/skill/{skillId}");
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<SkillDto>();
+        if (!int.TryParse(skillId, out var skillIdInt))
+        {
+            _logger.LogWarning("GetSkillByIdAsync called with invalid skillId format: {SkillId}", skillId);
+            return null;
+        }
+
+        var response = await _httpClient.GetAsync($"api/skill/{skillIdInt}");
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<SkillDto>()
+            : null;
     }
 
     public async Task<SkillDto?> AddSkillAsync(SkillDto skill)
     {
         var response = await _httpClient.PostAsJsonAsync("api/skill", skill);
-        return response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<SkillDto>() : null;
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<SkillDto>()
+            : null;
     }
 
     public async Task<bool> UpdateSkillAsync(string skillId, SkillDto skill)
     {
-        var response = await _httpClient.PutAsJsonAsync($"api/skill/{skillId}", skill);
+        if (!int.TryParse(skillId, out var skillIdInt))
+        {
+            _logger.LogWarning("UpdateSkillAsync called with invalid skillId format: {SkillId}", skillId);
+            return false;
+        }
+
+        var response = await _httpClient.PutAsJsonAsync($"api/skill/{skillIdInt}", skill);
         return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> RemoveSkillAsync(string skillId)
     {
-        var response = await _httpClient.DeleteAsync($"api/skill/{skillId}");
+        if (!int.TryParse(skillId, out var skillIdInt))
+        {
+            _logger.LogWarning("RemoveSkillAsync called with invalid skillId format: {SkillId}", skillId);
+            return false;
+        }
+
+        var response = await _httpClient.DeleteAsync($"api/skill/{skillIdInt}");
         return response.IsSuccessStatusCode;
     }
 
-    public Task<IEnumerable<SkillDto>> GetSkillsByUserIdAsync(string userId)
-        => _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>($"api/portfoliouser/{userId}/skills")!;
+    public async Task<IEnumerable<SkillDto>> GetSkillsByUserIdAsync(string userId)
+    {
+        try
+        {
+            if (!int.TryParse(userId, out var userIdInt))
+            {
+                _logger.LogWarning("GetSkillsByUserIdAsync called with invalid userId format: {UserId}", userId);
+                return Array.Empty<SkillDto>();
+            }
 
-    public Task<IEnumerable<SkillDto>> GetAllSkillsAsync()
-        => _httpClient.GetFromJsonAsync<IEnumerable<SkillDto>>("api/skill")!;
+            var response = await _httpClient.GetAsync($"api/portfoliouser/{userIdInt}/skills");
 
-    // ---------- PATCH SUPPORT ----------
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetSkillsByUserIdAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<SkillDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<SkillDto>>() ?? Array.Empty<SkillDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize SkillDto list. Response body: {Body}", body);
+                return Array.Empty<SkillDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching skills by user id");
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<SkillDto>> GetAllSkillsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/skill");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetAllSkillsAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<SkillDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<SkillDto>>() ?? Array.Empty<SkillDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize SkillDto list. Response body: {Body}", body);
+                return Array.Empty<SkillDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching all skills");
+            throw;
+        }
+    }
+
+    // ---------------------------
+    // PATCH SUPPORT
+    //---------------------------
+
     public async Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project)
     {
+        int? resolvedUserId = null;
+
+        if (int.TryParse(userId, out var uid))
+            resolvedUserId = uid;
+        else if (_userContext.CurrentPortfolioUser?.Id is int current)
+            resolvedUserId = current;
+
+        if (resolvedUserId is null)
+        {
+            _logger.LogWarning("PatchProjectAsync called without user id.");
+            return false;
+        }
+
         var joinEntry = new PortfolioUserProjectCreateDto
         {
-            PortfolioUserId = int.Parse(userId),
+            PortfolioUserId = resolvedUserId.Value,
             ProjectId = int.Parse(projectId)
         };
+
         var response = await _httpClient.PostAsJsonAsync($"api/project/attach", joinEntry);
         return response.IsSuccessStatusCode;
     }
@@ -224,16 +542,37 @@ public class SkillSnapApiClient : ISkillSnapApiClient
 
     public async Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile)
     {
-        var response = await _httpClient.PatchAsJsonAsync($"api/portfoliouser/{userId}", userProfile);
+        string target = !string.IsNullOrWhiteSpace(userId)
+            ? userId
+            : _userContext.CurrentPortfolioUser?.Id.ToString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            _logger.LogWarning("PatchUserProfileAsync called without valid user id.");
+            return false;
+        }
+
+        var response = await _httpClient.PatchAsJsonAsync($"api/portfoliouser/{target}", userProfile);
         return response.IsSuccessStatusCode;
     }
 
-    // ---------- USER SKILL UPDATES ----------
+    // ---------------------------
+    // USER SKILL UPDATES
+    //---------------------------
+
     public async Task<bool> UpdateUserSkillsAsync(IEnumerable<string> skills)
     {
-        if (skills == null) throw new ArgumentNullException(nameof(skills));
+        if (skills is null) throw new ArgumentNullException(nameof(skills));
 
-        var response = await _httpClient.PutAsJsonAsync("api/portfoliouser/1/skills", skills);
+        int? id = _userContext.CurrentPortfolioUser?.Id;
+
+        if (id is null)
+        {
+            _logger.LogWarning("UpdateUserSkillsAsync called without current user.");
+            return false;
+        }
+
+        var response = await _httpClient.PutAsJsonAsync($"api/portfoliouser/{id}/skills", skills);
         return response.IsSuccessStatusCode;
     }
 }

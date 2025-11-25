@@ -81,7 +81,7 @@ namespace SkillSnap_API_Test.Models
                 .FirstOrDefaultAsync();
 
             // Assert
-            Assert.Empty(result.portfolioUserProjects ?? new System.Collections.Generic.List<PortfolioUserProject>());
+            Assert.Empty(result!.portfolioUserProjects ?? new System.Collections.Generic.List<PortfolioUserProject>());
         }
     }
 }

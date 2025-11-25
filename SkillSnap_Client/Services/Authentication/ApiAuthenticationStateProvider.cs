@@ -21,11 +21,26 @@ public class ApiAuthenticationStateProvider : AuthenticationStateProvider
         }
 
         var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(token);
+        JwtSecurityToken jwt;
+        try
+        {
+            jwt = handler.ReadJwtToken(token);
+        }
+        catch
+        {
+            await _tokenService.RemoveTokenAsync();
+            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        }
+        if (jwt.ValidTo < DateTime.UtcNow)
+        {
+            await _tokenService.RemoveTokenAsync();
+            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        }
 
         var identity = new ClaimsIdentity(jwt.Claims, "jwt");
+        var user = new ClaimsPrincipal(identity);
 
-        return new AuthenticationState(new ClaimsPrincipal(identity));
+        return new AuthenticationState(user);
     }
 
     public void NotifyUserAuthentication(string token)

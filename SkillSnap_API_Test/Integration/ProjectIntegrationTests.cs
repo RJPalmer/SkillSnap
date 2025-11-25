@@ -44,7 +44,7 @@ namespace SkillSnap_API_Test.Integration
             // Assert
             Assert.NotNull(result);
             var projects = result.Value;
-            Assert.Equal(2, projects.Count());
+            Assert.Equal(2, projects!.Count());
         }
 
         [Fact]

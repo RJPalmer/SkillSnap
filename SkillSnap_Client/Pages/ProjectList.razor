@@ -1,10 +1,11 @@
 @page "/project-list"
 @using Microsoft.AspNetCore.Authorization
 @using SkillSnap.Shared.DTOs
-@using global::SkillSnap_Client.Services
+
 @inject HttpClient Http
 @inject ILogger<ProjectList> Logger
 @inject ISkillSnapApiClient ApiClient
+@inject UserContext UserContext
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -19,7 +20,7 @@
     <NotAuthorized>
         <p>Please log in to view this page.</p>
     </NotAuthorized>
-</AuthorizeView>
+    </AuthorizeView>
 
 <h3>Project List</h3>
 

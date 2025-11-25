@@ -13,7 +13,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Configure typed HttpClient with auth handler
 builder.Services.AddHttpClient<ISkillSnapApiClient, SkillSnapApiClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["API:BaseAddress"] ?? builder.HostEnvironment.BaseAddress);
+    client.BaseAddress = new Uri(builder.Configuration["API:BaseAddress"] ?? "https://localhost:7271/");
 });
 // .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
 
@@ -45,5 +45,9 @@ builder.Services.AddHttpClient("SkillSnapAPI", client =>
 
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("SkillSnapAPI"));
+
+//
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<UserContext>();
 
 await builder.Build().RunAsync();
