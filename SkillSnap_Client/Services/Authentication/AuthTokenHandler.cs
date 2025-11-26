@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 
+namespace SkillSnap_Client.Services.Authentication;
 public class AuthTokenHandler : DelegatingHandler
 {
     private readonly ITokenService _tokenService;

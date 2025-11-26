@@ -4,6 +4,9 @@ using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
 using SkillSnap_API.Services;
 using SkillSnap_API.Data;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 namespace SkillSnap_API.Controllers;
 
@@ -108,13 +111,21 @@ public class AccountController : ControllerBase
         if (!result.Succeeded)
             return Unauthorized("Invalid email or password");
 
+        var portfolioUser = await _context.PortfolioUsers
+            .FirstOrDefaultAsync(pu => pu.ApplicationUserId == user.Id);
+        if (portfolioUser != null)
+        {
+            user.PortfolioUser = portfolioUser;
+        }
+        
         // Generate JWT Token
         var token = _tokenService.GenerateToken(user);
-
+        var portfolioDto = portfolioUser != null ? portfolioUser.ToDto() : null;
         return Ok(new
         {
             Message = "Login successful",
-            Token = token
+            Token = token,
+            PortfolioUser = portfolioDto
         });
     }
 
@@ -128,5 +139,38 @@ public class AccountController : ControllerBase
         await _signInManager.SignOutAsync();
 
         return Ok(new { Message = "Logged out successfully" });
+    }
+
+    [Authorize]
+    [HttpPost("link-portfolio-user")]
+    public async Task<IActionResult> LinkPortfolioUser([FromBody] int portfolioUserId)
+    {
+        var appUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(appUserId))
+            return Unauthorized("User not found in JWT claims.");
+
+        var appUser = await _userManager.FindByIdAsync(appUserId);
+
+        if (appUser == null)
+            return Unauthorized("ApplicationUser not found.");
+
+        if(appUser.PortfolioUser is not null && appUser.PortfolioUser.Id != portfolioUserId)
+            return BadRequest("ApplicationUser is already linked to a PortfolioUser."); 
+
+        var portfolioUser = await _context.PortfolioUsers.FindAsync(portfolioUserId);
+        if (portfolioUser == null)
+            return NotFound("PortfolioUser not found.");
+        appUser.PortfolioUser = portfolioUser;
+
+        var result = await _userManager.UpdateAsync(appUser);
+
+        if (!result.Succeeded)
+            return BadRequest("Failed to link PortfolioUser to ApplicationUser.");
+
+        // Issue new JWT with updated claim
+        var token = _tokenService.GenerateToken(appUser);
+
+        return Ok(new { token });
     }
 }

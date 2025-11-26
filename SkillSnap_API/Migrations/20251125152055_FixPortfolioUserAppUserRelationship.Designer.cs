@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillSnap_API.Data;
 
@@ -10,9 +11,11 @@ using SkillSnap_API.Data;
 namespace SkillSnap_API.Migrations
 {
     [DbContext(typeof(SkillSnapDbContext))]
-    partial class SkillSnapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251125152055_FixPortfolioUserAppUserRelationship")]
+    partial class FixPortfolioUserAppUserRelationship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.11");
@@ -218,6 +221,9 @@ namespace SkillSnap_API.Migrations
                     b.Property<string>("ApplicationUserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApplicationUserId1")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Bio")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -233,6 +239,9 @@ namespace SkillSnap_API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.HasIndex("ApplicationUserId1")
                         .IsUnique();
 
                     b.ToTable("PortfolioUsers");
@@ -388,9 +397,12 @@ namespace SkillSnap_API.Migrations
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
                 {
                     b.HasOne("SkillSnap.Shared.Models.ApplicationUser", "ApplicationUser")
+                        .WithOne()
+                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId");
+
+                    b.HasOne("SkillSnap.Shared.Models.ApplicationUser", null)
                         .WithOne("PortfolioUser")
-                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId1");
 
                     b.Navigation("ApplicationUser");
                 });

@@ -29,17 +29,17 @@ public class JwtTokenService
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-       var claims = new List<Claim>
+        var claims = new List<Claim>
 {
     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
     new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
     new Claim(ClaimTypes.NameIdentifier, user.Id)
 };
 
-if (user.PortfolioUser != null)
-{
-    claims.Add(new Claim("portfolioUserId", user.PortfolioUser.Id.ToString()));
-}
+        if (user.PortfolioUser != null)
+        {
+            claims.Add(new Claim("portfolioUserId", user.PortfolioUser.Id.ToString()));
+        }
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],

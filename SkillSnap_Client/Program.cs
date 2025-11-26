@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using SkillSnap_Client;
 using SkillSnap_Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using SkillSnap_Client.Services.Authentication;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -14,8 +15,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddHttpClient<ISkillSnapApiClient, SkillSnapApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["API:BaseAddress"] ?? "https://localhost:7271/");
-});
-// .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
+})
+.AddHttpMessageHandler<AuthTokenHandler>();
 
 
 

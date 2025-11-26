@@ -17,5 +17,5 @@ public class Project
     public required string ImageUrl { get; set; }
 
     // public int PortfolioUserId { get; set; }
-    public ICollection<PortfolioUserProject> portfolioUserProjects { get; set; }
+    public ICollection<PortfolioUserProject>? portfolioUserProjects { get; set; }
 }

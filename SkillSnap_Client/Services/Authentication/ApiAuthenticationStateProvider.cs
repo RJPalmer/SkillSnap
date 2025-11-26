@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 
+namespace SkillSnap_Client.Services.Authentication;
 public class ApiAuthenticationStateProvider : AuthenticationStateProvider
 {
     private readonly ITokenService _tokenService;

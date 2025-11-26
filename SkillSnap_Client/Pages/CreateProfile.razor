@@ -78,7 +78,8 @@ else
             }
 
             UserContext.SetPortfolioUser(created);
-
+            Logger.LogInformation("Profile created successfully for user {ProfileId}", created.Id);
+            
             Nav.NavigateTo("/profile-card");
         }
         catch (Exception ex)

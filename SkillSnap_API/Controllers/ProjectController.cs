@@ -146,9 +146,9 @@ namespace SkillSnap_API.Controllers
 
             user.portfolioUserProjects.Add(new PortfolioUserProject{
                 PortfolioUser = user,
-                PortfolioUserId = user.Id,
+                // PortfolioUserId = user.Id,
                 Project = project,
-                ProjectId = project.Id
+                // ProjectId = project.Id
             });
 
             await _context.SaveChangesAsync();

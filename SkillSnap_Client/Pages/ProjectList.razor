@@ -124,10 +124,16 @@ else
     };
 
     private string? selectedProjectId;
-    private string userId = "1"; // assuming static for now, adjust if dynamic
 
     protected override async Task OnInitializedAsync()
     {
+        var portfolioId = UserContext.CurrentPortfolioUser?.Id;
+        if (portfolioId == null)
+        {
+            errorMessage = "No portfolio profile found. Please create your profile first.";
+            return;
+        }
+
         try
         {
             projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
@@ -180,6 +186,13 @@ else
     /// <returns></returns>
     private async Task RemoveLastProject()
     {
+        var portfolioId = UserContext.CurrentPortfolioUser?.Id;
+        if (portfolioId == null)
+        {
+            errorMessage = "No portfolio profile found. Please create your profile first.";
+            return;
+        }
+
         if (projects == null || !projects.Any())
             return;
 
@@ -205,17 +218,20 @@ else
         {
             Title = string.Empty,
             Description = string.Empty,
-            ImageUrl = string.Empty
+            ImageUrl = string.Empty,
+            PortfolioUserId = UserContext.CurrentPortfolioUser?.Id ?? 0
         }; // Reset form fields
-        if (projects != null && projects.Count > 0)
-        {
-            newProject.PortfolioUserId = projects.First().PortfolioUserId;
-        }
         isCreatingProject = true;
     }
 
     private async Task ShowAttachForm()
     {
+        var portfolioId = UserContext.CurrentPortfolioUser?.Id;
+        if (portfolioId == null)
+        {
+            errorMessage = "No portfolio profile found. Please create your profile first.";
+            return;
+        }
         try
         {
             var allProjects = await ApiClient.GetAllProjectsAsync();
@@ -232,10 +248,17 @@ else
 
     private async Task AttachProject()
     {
+        var portfolioId = UserContext.CurrentPortfolioUser?.Id;
+        if (portfolioId == null)
+        {
+            errorMessage = "No portfolio profile found. Please create your profile first.";
+            return;
+        }
+
         if (!string.IsNullOrEmpty(selectedProjectId))
         {
             var linkedSuccessfully = await ApiClient.PatchProjectAsync(
-                selectedProjectId, userId, new ProjectDto { PortfolioUserId = int.Parse(userId),
+                selectedProjectId, portfolioId.Value.ToString(), new ProjectDto { PortfolioUserId = portfolioId.Value,
                 Description = string.Empty,
                 ImageUrl= string.Empty,Title = string.Empty });
 
@@ -256,9 +279,15 @@ else
     /// <returns></returns>
     private async Task SubmitNewProject()
     {
+        var portfolioId = UserContext.CurrentPortfolioUser?.Id;
+        if (portfolioId == null)
+        {
+            errorMessage = "No portfolio profile found. Please create your profile first.";
+            return;
+        }
         try
         {   
-            newProject.PortfolioUserId = 1;
+            newProject.PortfolioUserId = portfolioId.Value;
             await ApiClient.CreateProjectAsync(newProject);
             projects = (await ApiClient.GetUserProjectsAsync())?.ToList();
             isCreatingProject = false;

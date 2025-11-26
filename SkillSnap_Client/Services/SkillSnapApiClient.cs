@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using SkillSnap.Shared.DTOs;
+using SkillSnap.Shared.DTOs.Account;
 using SkillSnap.Shared.Models;
 
 namespace SkillSnap_Client.Services;
@@ -14,6 +15,8 @@ public interface ISkillSnapApiClient
     Task<bool> UpdateUserProfileAsync(string userId, PortfolioUserDto userProfile);
     Task<bool> DeleteUserProfileAsync(string userId);
     Task<PortfolioUserDto?> CreatePortfolioUserAsync(PortfolioUserCreateDto userProfile);
+    Task<IEnumerable<PortfolioUserDto>> GetUnlinkedPortfolioUsersAsync();
+    Task<bool> LinkPortfolioUserAsync(int portfolioUserId);
 
     // Projects
     Task<IEnumerable<ProjectDto>> GetUserProjectsAsync();
@@ -575,4 +578,56 @@ public class SkillSnapApiClient : ISkillSnapApiClient
         var response = await _httpClient.PutAsJsonAsync($"api/portfoliouser/{id}/skills", skills);
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<IEnumerable<PortfolioUserDto>> GetUnlinkedPortfolioUsersAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("api/portfoliouser/unlinked");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var text = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("GetUnlinkedPortfolioUsersAsync returned {Status}. Body: {Body}", response.StatusCode, text);
+                return Array.Empty<PortfolioUserDto>();
+            }
+
+            try
+            {
+                return await response.Content.ReadFromJsonAsync<IEnumerable<PortfolioUserDto>>() ?? Array.Empty<PortfolioUserDto>();
+            }
+            catch (System.Text.Json.JsonException jex)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogError(jex, "Failed to deserialize unlinked users. Response body: {Body}", body);
+                return Array.Empty<PortfolioUserDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching unlinked portfolio users");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// LinkPortfolioUserAsync - link the authenticated user to a PortfolioUser
+    /// </summary>
+    /// <param name="portfolioUserId"></param>
+    /// <returns></returns>
+    public async Task<bool> LinkPortfolioUserAsync(int portfolioUserId)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "api/account/link-portfolio-user", portfolioUserId);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Failed to link PortfolioUser. Server returned {Status}", response.StatusCode);
+            return false;
+        }
+
+        return true;
+    }
+
+
 }

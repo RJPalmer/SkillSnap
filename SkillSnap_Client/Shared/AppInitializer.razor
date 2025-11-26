@@ -26,17 +26,19 @@
             }
         }
 
-        // No portfolio user found → redirect to creation page
-        // Avoid redirect loop: do not navigate if already on the create page
+        // No portfolio user found → redirect to selection/creation page
+        // Avoid redirect loop: do not navigate if already on the select or create page
         var relative = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
-        if (string.Equals(relative, "profile/create", StringComparison.OrdinalIgnoreCase) ||
+        if (string.Equals(relative, "profile/select", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(relative, "profile/select/", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(relative, "profile/create", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(relative, "profile/create/", StringComparison.OrdinalIgnoreCase))
         {
-            Logger?.LogDebug("Already on /profile/create, skipping redirect to avoid loop.");
+            Logger?.LogDebug("Already on profile selection/creation page, skipping redirect to avoid loop.");
             return;
         }
 
-        Logger?.LogInformation("No portfolio profile found for user; navigating to /profile/create.");
-        Navigation.NavigateTo("/profile/create");
+        Logger?.LogInformation("No portfolio profile found for user; navigating to /profile/select.");
+        Navigation.NavigateTo("/profile/select");
     }
 }

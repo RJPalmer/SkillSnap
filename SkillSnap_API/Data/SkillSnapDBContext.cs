@@ -30,10 +30,11 @@ public class SkillSnapDbContext : IdentityDbContext<ApplicationUser>
             .WithOne()
             .HasForeignKey(pus => pus.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
-        modelBuilder.Entity<PortfolioUser>()
-            .HasOne(p => p.ApplicationUser)
-            .WithOne()
-            .HasForeignKey<PortfolioUser>(p => p.ApplicationUserId);
+        modelBuilder.Entity<ApplicationUser>()
+            .HasOne(a => a.PortfolioUser)
+            .WithOne(p => p.ApplicationUser)
+            .HasForeignKey<PortfolioUser>(p => p.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Project>()
             .HasMany(pup => pup.portfolioUserProjects)
             .WithOne()
