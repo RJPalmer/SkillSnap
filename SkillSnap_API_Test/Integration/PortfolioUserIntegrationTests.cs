@@ -1,14 +1,16 @@
-
-
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
+using Xunit;
 using SkillSnap_API.Controllers;
 using SkillSnap_API.Data;
+using SkillSnap_API.Services;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
-using Xunit;
-using Microsoft.AspNetCore.Mvc;
 
 namespace SkillSnap_API_Test.Integration
 {
@@ -25,44 +27,58 @@ namespace SkillSnap_API_Test.Integration
             return context;
         }
 
+        private UserManager<ApplicationUser> MockUserManager()
+        {
+            var store = new Mock<IUserStore<ApplicationUser>>();
+            return new UserManager<ApplicationUser>(
+                store.Object, null, null, null, null, null, null, null, null);
+        }
+
+        private JwtTokenService MockJwtTokenService()
+        {
+            var mock = new Mock<JwtTokenService>(null, null);
+            return mock.Object;
+        }
+
+        // ------------------------------------------------------------
+        // GET ALL
+        // ------------------------------------------------------------
         [Fact]
         public async Task GetAll_ReturnsAllUsers()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
             context.PortfolioUsers.AddRange(
                 new PortfolioUser { Name = "User A", Bio = "Bio A", ProfileImageUrl = "Url A" },
                 new PortfolioUser { Name = "User B", Bio = "Bio B", ProfileImageUrl = "Url B" }
             );
             await context.SaveChangesAsync();
-            var controller = new PortfolioUserController(context);
 
-            // Act
+            var controller = new PortfolioUserController(context, MockUserManager(), MockJwtTokenService());
+
             var result = await controller.GetAll();
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
             var puDto = Assert.IsAssignableFrom<IEnumerable<PortfolioUserDto>>(okResult.Value);
 
-            // Assert
             Assert.NotNull(puDto);
             Assert.Equal(2, puDto.Count());
         }
 
+        // ------------------------------------------------------------
+        // GET BY ID
+        // ------------------------------------------------------------
         [Fact]
         public async Task GetById_ReturnsUser_WhenExists()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
             var user = new PortfolioUser { Name = "Test User", Bio = "Test Bio", ProfileImageUrl = "Image URL" };
             context.PortfolioUsers.Add(user);
             await context.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(context);
+            var controller = new PortfolioUserController(context, MockUserManager(), MockJwtTokenService());
 
-            // Act
             var result = await controller.GetById(user.Id);
 
-            // Assert
-            var okResult = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(result.Result);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
             var dto = Assert.IsType<PortfolioUserDto>(okResult.Value);
             Assert.Equal("Test User", dto.Name);
         }
@@ -70,15 +86,12 @@ namespace SkillSnap_API_Test.Integration
         [Fact]
         public async Task Create_AddsNewUser()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
-            var controller = new PortfolioUserController(context);
+            var controller = new PortfolioUserController(context, MockUserManager(), MockJwtTokenService());
             var newUser = new PortfolioUserCreateDto { Name = "New User", Bio = "New Bio", ProfileImageUrl = "Image URL" };
 
-            // Act
             var result = await controller.Create(newUser);
 
-            // Assert
             var createdUser = context.PortfolioUsers.FirstOrDefault();
             Assert.NotNull(createdUser);
             Assert.Equal("New User", createdUser.Name);
@@ -87,38 +100,32 @@ namespace SkillSnap_API_Test.Integration
         [Fact]
         public async Task Delete_RemovesUser_WhenExists()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
             var user = new PortfolioUser { Name = "User To Delete", Bio = "Bio", ProfileImageUrl = "Image URL" };
             context.PortfolioUsers.Add(user);
             await context.SaveChangesAsync();
-            var controller = new PortfolioUserController(context);
+            var controller = new PortfolioUserController(context, MockUserManager(), MockJwtTokenService());
 
-            // Act
             var result = await controller.Delete(user.Id);
 
-            // Assert
-            Assert.IsType<Microsoft.AspNetCore.Mvc.NoContentResult>(result);
+            Assert.IsType<NoContentResult>(result);
             Assert.Empty(context.PortfolioUsers);
         }
 
         [Fact]
         public async Task UpdateUserSkills_AddsNewSkills()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
             var user = new PortfolioUser { Name = "User With Skills", Bio = "User Bio", ProfileImageUrl ="ImageURL 1" };
             var skill = new Skill { Name = "C#", Level = "Beginner" };
             context.PortfolioUsers.Add(user);
             context.Skills.Add(skill);
             await context.SaveChangesAsync();
-            var controller = new PortfolioUserController(context);
+            var controller = new PortfolioUserController(context, MockUserManager(), MockJwtTokenService());
 
-            // Act
             var updatedSkills = new[] { "C#", "SQL" }; // SQL does not exist yet
             var result = await controller.UpdateUserSkills(user.Id, updatedSkills);
 
-            // Assert
             var updatedUser = await context.PortfolioUsers
                 .Include(u => u.PortfolioUserSkills)
                 .ThenInclude(pus => pus.Skill)

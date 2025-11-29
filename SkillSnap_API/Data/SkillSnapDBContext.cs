@@ -21,13 +21,13 @@ public class SkillSnapDbContext : IdentityDbContext<ApplicationUser>
 
         // Configure one-to-many relationship between PortfolioUser and Project
         modelBuilder.Entity<PortfolioUser>()
-            .HasMany(pu => pu.portfolioUserProjects)
-            .WithOne()
+            .HasMany(pu => pu.PortfolioUserProjects)
+            .WithOne(pup => pup.PortfolioUser)
             .HasForeignKey(pup => pup.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<PortfolioUser>()
             .HasMany(pu => pu.PortfolioUserSkills)
-            .WithOne()
+            .WithOne(pus => pus.PortfolioUser)
             .HasForeignKey(pus => pus.PortfolioUserId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ApplicationUser>()
@@ -36,12 +36,12 @@ public class SkillSnapDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey<PortfolioUser>(p => p.ApplicationUserId)
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Project>()
-            .HasMany(pup => pup.portfolioUserProjects)
-            .WithOne()
-            .HasForeignKey(p => p.ProjectId);
+            .HasMany(p => p.PortfolioUserProjects)
+            .WithOne(pup => pup.Project)
+            .HasForeignKey(pup => pup.ProjectId);
         modelBuilder.Entity<Skill>()
             .HasMany(s => s.SkillPortfolioUsers)
-            .WithOne()
+            .WithOne(pus => pus.Skill)
             .HasForeignKey(pus => pus.SkillId)
             .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<PortfolioUserSkill>()

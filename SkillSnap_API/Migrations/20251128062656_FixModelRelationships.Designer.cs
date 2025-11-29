@@ -11,8 +11,8 @@ using SkillSnap_API.Data;
 namespace SkillSnap_API.Migrations
 {
     [DbContext(typeof(SkillSnapDbContext))]
-    [Migration("20251125152055_FixPortfolioUserAppUserRelationship")]
-    partial class FixPortfolioUserAppUserRelationship
+    [Migration("20251128062656_FixModelRelationships")]
+    partial class FixModelRelationships
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -221,9 +221,6 @@ namespace SkillSnap_API.Migrations
                     b.Property<string>("ApplicationUserId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ApplicationUserId1")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Bio")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -241,9 +238,6 @@ namespace SkillSnap_API.Migrations
                     b.HasIndex("ApplicationUserId")
                         .IsUnique();
 
-                    b.HasIndex("ApplicationUserId1")
-                        .IsUnique();
-
                     b.ToTable("PortfolioUsers");
                 });
 
@@ -255,19 +249,9 @@ namespace SkillSnap_API.Migrations
                     b.Property<int>("ProjectId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("PortfolioUserId1")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ProjectId1")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("PortfolioUserId", "ProjectId");
 
-                    b.HasIndex("PortfolioUserId1");
-
                     b.HasIndex("ProjectId");
-
-                    b.HasIndex("ProjectId1");
 
                     b.ToTable("PortfolioUserProjects");
                 });
@@ -280,23 +264,13 @@ namespace SkillSnap_API.Migrations
                     b.Property<int>("SkillId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("PortfolioUserId1")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Proficiency")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("SkillId1")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("PortfolioUserId", "SkillId");
 
-                    b.HasIndex("PortfolioUserId1");
-
                     b.HasIndex("SkillId");
-
-                    b.HasIndex("SkillId1");
 
                     b.ToTable("PortfolioUserSkills");
                 });
@@ -397,39 +371,24 @@ namespace SkillSnap_API.Migrations
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
                 {
                     b.HasOne("SkillSnap.Shared.Models.ApplicationUser", "ApplicationUser")
-                        .WithOne()
-                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId");
-
-                    b.HasOne("SkillSnap.Shared.Models.ApplicationUser", null)
                         .WithOne("PortfolioUser")
-                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId1");
+                        .HasForeignKey("SkillSnap.Shared.Models.PortfolioUser", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUserProject", b =>
                 {
-                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", null)
-                        .WithMany("portfolioUserProjects")
+                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", "PortfolioUser")
+                        .WithMany("PortfolioUserProjects")
                         .HasForeignKey("PortfolioUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", "PortfolioUser")
-                        .WithMany()
-                        .HasForeignKey("PortfolioUserId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SkillSnap.Shared.Models.Project", null)
-                        .WithMany("portfolioUserProjects")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("SkillSnap.Shared.Models.Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectId1")
+                        .WithMany("PortfolioUserProjects")
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -440,27 +399,15 @@ namespace SkillSnap_API.Migrations
 
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUserSkill", b =>
                 {
-                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", null)
+                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", "PortfolioUser")
                         .WithMany("PortfolioUserSkills")
                         .HasForeignKey("PortfolioUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SkillSnap.Shared.Models.PortfolioUser", "PortfolioUser")
-                        .WithMany()
-                        .HasForeignKey("PortfolioUserId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SkillSnap.Shared.Models.Skill", null)
+                    b.HasOne("SkillSnap.Shared.Models.Skill", "Skill")
                         .WithMany("SkillPortfolioUsers")
                         .HasForeignKey("SkillId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SkillSnap.Shared.Models.Skill", "Skill")
-                        .WithMany()
-                        .HasForeignKey("SkillId1")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -476,14 +423,14 @@ namespace SkillSnap_API.Migrations
 
             modelBuilder.Entity("SkillSnap.Shared.Models.PortfolioUser", b =>
                 {
-                    b.Navigation("PortfolioUserSkills");
+                    b.Navigation("PortfolioUserProjects");
 
-                    b.Navigation("portfolioUserProjects");
+                    b.Navigation("PortfolioUserSkills");
                 });
 
             modelBuilder.Entity("SkillSnap.Shared.Models.Project", b =>
                 {
-                    b.Navigation("portfolioUserProjects");
+                    b.Navigation("PortfolioUserProjects");
                 });
 
             modelBuilder.Entity("SkillSnap.Shared.Models.Skill", b =>

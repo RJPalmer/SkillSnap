@@ -35,7 +35,7 @@ namespace SkillSnap_API.Controllers
                 Name = "Jordan Developer",
                 Bio = "Full-stack developer passionate about learning new tech.",
                 ProfileImageUrl = "https://example.com/images/jordan.png",
-                portfolioUserProjects = new List<PortfolioUserProject>()
+                PortfolioUserProjects = new List<PortfolioUserProject>()
             };
             var projects = new List<Project>
                 {

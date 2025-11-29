@@ -23,7 +23,7 @@ public interface ISkillSnapApiClient
     Task<IEnumerable<ProjectDto>> GetProjectsByUserIdAsync(string userId);
     Task<IEnumerable<ProjectDto>> GetAllProjectsAsync();
     Task<ProjectDto?> GetProjectByIdAsync(string projectId);
-    Task<ProjectDto?> CreateProjectAsync(ProjectDto project);
+    Task<ProjectDto?> CreateProjectAsync(ProjectCreateDto project);
     Task<bool> UpdateProjectAsync(string projectId, ProjectDto dto);
     Task<bool> DeleteProjectAsync(string projectId);
     Task<ProjectDto?> RemoveProjectById(string projectId);
@@ -38,7 +38,6 @@ public interface ISkillSnapApiClient
     Task<bool> RemoveSkillAsync(string skillId);
 
     // Patch Support
-    Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project);
     Task<bool> PatchSkillAsync(string skillId, SkillDto skill);
     Task<bool> PatchUserProfileAsync(string userId, PortfolioUserDto userProfile);
 
@@ -249,7 +248,7 @@ public class SkillSnapApiClient : ISkillSnapApiClient
             : null;
     }
 
-    public async Task<ProjectDto?> CreateProjectAsync(ProjectDto project)
+    public async Task<ProjectDto?> CreateProjectAsync(ProjectCreateDto project)
     {
         var response = await _httpClient.PostAsJsonAsync("api/project", project);
         return response.IsSuccessStatusCode
@@ -512,30 +511,6 @@ public class SkillSnapApiClient : ISkillSnapApiClient
     // PATCH SUPPORT
     //---------------------------
 
-    public async Task<bool> PatchProjectAsync(string projectId, string userId, ProjectDto project)
-    {
-        int? resolvedUserId = null;
-
-        if (int.TryParse(userId, out var uid))
-            resolvedUserId = uid;
-        else if (_userContext.CurrentPortfolioUser?.Id is int current)
-            resolvedUserId = current;
-
-        if (resolvedUserId is null)
-        {
-            _logger.LogWarning("PatchProjectAsync called without user id.");
-            return false;
-        }
-
-        var joinEntry = new PortfolioUserProjectCreateDto
-        {
-            PortfolioUserId = resolvedUserId.Value,
-            ProjectId = int.Parse(projectId)
-        };
-
-        var response = await _httpClient.PostAsJsonAsync($"api/project/attach", joinEntry);
-        return response.IsSuccessStatusCode;
-    }
 
     public async Task<bool> PatchSkillAsync(string skillId, SkillDto skill)
     {

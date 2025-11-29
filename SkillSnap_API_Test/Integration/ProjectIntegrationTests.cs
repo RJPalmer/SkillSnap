@@ -71,11 +71,11 @@ namespace SkillSnap_API_Test.Integration
 
             // Assert
             var updatedUser = await dbContext.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
+                .Include(u => u.PortfolioUserProjects).ThenInclude(pup => pup.Project)
                 .FirstOrDefaultAsync(u => u.Id == 99);
 
             Assert.NotNull(updatedUser);
-            Assert.Contains(updatedUser.portfolioUserProjects, p => p.ProjectId == 100);
+            Assert.Contains(updatedUser.PortfolioUserProjects, p => p.ProjectId == 100);
         }
     }
 }
