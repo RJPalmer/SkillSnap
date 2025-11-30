@@ -273,8 +273,9 @@ namespace SkillSnap_API_Test.Controllers
             await db.SaveChangesAsync();
 
             var jwt = CreateJwtMock();
-            jwt.Setup(j => j.GenerateToken(It.IsAny<ApplicationUser>())).Returns("NEW_TOKEN");
-
+            
+            jwt.Setup(j => j.GenerateToken(It.IsAny<ApplicationUser>())).ReturnsAsync("NEW_TOKEN");
+    
             var userManager = CreateUserManagerMock();
             userManager.Setup(m => m.FindByIdAsync("app123")).ReturnsAsync(appUser);
             userManager.Setup(m => m.UpdateAsync(appUser)).ReturnsAsync(IdentityResult.Success);

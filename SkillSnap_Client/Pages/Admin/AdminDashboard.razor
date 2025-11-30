@@ -1,0 +1,330 @@
+@page "/admin/dashboard"
+@using SkillSnap_Client.Services.Authentication
+@using SkillSnap.Shared.DTOs
+@using SkillSnap_Shared.DTOs.Account
+@inject ISkillSnapApiClient Api
+@inject NavigationManager Nav
+@inject ITokenService TokenService
+@inject IJSRuntime JS
+@inject ILogger<AdminDashboard> Logger
+
+<h2 class="mb-3">Admin Dashboard</h2>
+
+@if (isLoading)
+{
+    <p>Loading user data...</p>
+}
+else if (users == null || !users.Any())
+{
+    <p>No users found.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Last Login</th>
+                <th>Roles</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>@(user.LastLogin?.ToString("g") ?? "Never")</td>
+                    <td>@string.Join(", ", user.Roles ?? new List<string>())</td>
+                    <td>
+                        <button class="btn btn-info btn-sm me-2" @onclick="() => OpenEditRolesModal(user)" disabled="@isProcessing">
+                            Edit Roles
+                        </button>
+                        <button class="btn btn-warning btn-sm me-2" @onclick="() => ResetPassword(user.Id)" disabled="@isProcessing">
+                            Reset Password
+                        </button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteUser(user.Id)" disabled="@isProcessing">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast show position-fixed bottom-0 end-0 m-3" role="alert">
+        <div class="toast-body">
+            @toastMessage
+        </div>
+    </div>
+}
+
+<!-- Edit Roles Modal -->
+<div class="modal @(showEditRolesModal ? "show" : "")" style="display: @(showEditRolesModal ? "block" : "none")" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Roles for @editingUser?.Email</h5>
+                <button type="button" class="btn-close" @onclick="CloseEditRolesModal" disabled="@isProcessing"></button>
+            </div>
+            <div class="modal-body">
+                @if (availableRoles != null && availableRoles.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var role in availableRoles)
+                        {
+                            <label class="list-group-item">
+                                <input type="checkbox" class="form-check-input me-2" 
+                                       @onchange="(ChangeEventArgs e) => ToggleRole(role, e?.Value is bool b && b)" 
+                                       checked="@(selectedRoles?.Contains(role) == true)"
+                                       disabled="@isProcessing" />
+                                <span>@role</span>
+                            </label>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p>Loading available roles...</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseEditRolesModal" disabled="@isProcessing">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" @onclick="SaveRoles" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>Save Roles</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showEditRolesModal)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private List<AdminUserDto> users = new();
+    private string toastMessage = string.Empty;
+
+    // Edit Roles Modal State
+    private bool showEditRolesModal = false;
+    private AdminUserDto? editingUser = null;
+    private List<string> selectedRoles = new();
+    private List<string> availableRoles = new();
+
+    /// <summary>
+    /// Loads all users when the component initializes.
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            var token = await TokenService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            users = (await Api.GetAllUsersAsync())?.ToList() ?? new List<AdminUserDto>();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading admin dashboard");
+            await ShowToast("Error loading user data.");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Opens the Edit Roles modal for the specified user.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    private async Task OpenEditRolesModal(AdminUserDto user)
+    {
+        editingUser = user;
+        selectedRoles = new List<string>(user.Roles ?? new List<string>());
+        availableRoles = new List<string>();
+        showEditRolesModal = true;
+        StateHasChanged();
+
+        // Load available roles
+        try
+        {
+            availableRoles = (await Api.GetAvailableRolesAsync())?.ToList() ?? new List<string>();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading available roles");
+            await ShowToast("Error loading available roles.");
+            showEditRolesModal = false;
+        }
+    }
+
+    /// <summary>
+    /// Closes the Edit Roles modal without saving.
+    /// </summary>
+    private void CloseEditRolesModal()
+    {
+        showEditRolesModal = false;
+        editingUser = null;
+        selectedRoles = new();
+        availableRoles = new();
+    }
+
+    /// <summary>
+    /// Toggles a role in the selected roles list.
+    /// </summary>
+    /// <param name="role"></param>
+    /// <param name="isChecked"></param>
+    private void ToggleRole(string role, bool isChecked)
+    {
+        if (isChecked && !selectedRoles.Contains(role))
+        {
+            selectedRoles.Add(role);
+        }
+        else if (!isChecked && selectedRoles.Contains(role))
+        {
+            selectedRoles.Remove(role);
+        }
+    }
+
+    /// <summary>
+    /// Saves the selected roles for the editing user.
+    /// </summary>
+    /// <returns></returns>
+    private async Task SaveRoles()
+    {
+        if (editingUser == null) return;
+
+        isProcessing = true;
+        try
+        {
+            var success = await Api.UpdateUserRolesAsync(editingUser.Id, selectedRoles);
+            if (success)
+            {
+                // Update the user's roles in the local list
+                var userToUpdate = users.FirstOrDefault(u => u.Id == editingUser.Id);
+                if (userToUpdate != null)
+                {
+                    userToUpdate.Roles = new List<string>(selectedRoles);
+                }
+                await ShowToast($"Roles updated successfully for {editingUser.Email}.");
+                CloseEditRolesModal();
+                StateHasChanged();
+            }
+            else
+            {
+                await ShowToast("Failed to update roles.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating roles");
+            await ShowToast("Error updating roles.");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Resets the password for a given user.
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <returns></returns>
+    private async Task ResetPassword(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Reset password for this user?");
+        if (!confirmed) return;
+
+        isProcessing = true;
+        try
+        {
+            var result = await Api.ResetUserPasswordAsync(userId);
+            await ShowToast($"Password reset successfully for user.");
+            Logger.LogInformation($"Password reset: {result}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resetting password");
+            await ShowToast("Error resetting password.");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a given user.
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <returns></returns>
+    private async Task DeleteUser(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete this user permanently?");
+        if (!confirmed) return;
+
+        isProcessing = true;
+        try
+        {
+            await Api.DeleteUserAsync(userId);
+            users.RemoveAll(u => u.Id == userId);
+            await ShowToast("User deleted successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting user");
+            await ShowToast("Error deleting user.");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    /// <summary>
+    /// Shows a toast notification with a given message.
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private async Task ShowToast(string message)
+    {
+        toastMessage = message;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastMessage = string.Empty;
+        StateHasChanged();
+    }
+}

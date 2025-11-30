@@ -32,7 +32,7 @@ namespace SkillSnap.Shared.Models
         /// URL of the profile image.
         /// </summary>
         [Required]
-        public string ProfileImageUrl { get; set; } = null!;
+        public string? ProfileImageUrl { get; set; } = null!;
 
         /// <summary>
         /// Convenience property alias for ProfileImageUrl (backward compatibility).

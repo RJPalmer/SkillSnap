@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
+using SkillSnap_Shared.DTOs.Account;
 using SkillSnap_API.Services;
 using SkillSnap_API.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -17,18 +18,21 @@ public class AccountController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly JwtTokenService _tokenService;
-
     private readonly SkillSnapDbContext _context;
+    private readonly IConfiguration _config;
+
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         JwtTokenService tokenService,
-        SkillSnapDbContext context)
+        SkillSnapDbContext context,
+        IConfiguration config)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _context = context;
+        _config = config;
     }
 
     [HttpPost("register")]
@@ -52,7 +56,10 @@ public class AccountController : ControllerBase
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
-
+            
+            // Assign "User" role
+            await _userManager.AddToRoleAsync(user, "User");
+            
             // Create PortfolioUser record
             var portfolioUser = new PortfolioUser
             {
@@ -119,13 +126,12 @@ public class AccountController : ControllerBase
         }
         
         // Generate JWT Token
-        var token = _tokenService.GenerateToken(user);
-        var portfolioDto = portfolioUser != null ? portfolioUser.ToDto() : null;
-        return Ok(new
+        var token = await _tokenService.GenerateToken(user);
+        return Ok(new LoginResponseDto
         {
-            Message = "Login successful",
             Token = token,
-            PortfolioUser = portfolioDto
+            Email = user.Email ?? string.Empty,
+            Expiration = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60"))
         });
     }
 

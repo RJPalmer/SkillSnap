@@ -351,7 +351,7 @@ namespace SkillSnap_API.Controllers
             string? token = null;
             try
             {
-                token = _jwtTokenService.GenerateToken(appUser);
+                token = await _jwtTokenService.GenerateToken(appUser);
             }
             catch
             {
@@ -368,7 +368,7 @@ namespace SkillSnap_API.Controllers
                 Id = user.Id,
                 Name = user.Name,
                 Bio = user.Bio,
-                ProfileImageUrl = user.ProfileImageUrl,
+                ProfileImageUrl = user.ProfileImageUrl!,
                 Projects = user.PortfolioUserProjects?.Where(p => p.Project != null).Select(p => new PortfolioUserProjectDto
                 {
                     PortfolioUserId = p.PortfolioUser!.Id,

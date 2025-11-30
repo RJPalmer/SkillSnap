@@ -9,17 +9,21 @@ using SkillSnap_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --------------------------
-// Configure DbContext
-// --------------------------
+// -------------------------------------------------------------
+// Database
+// -------------------------------------------------------------
 builder.Services.AddDbContext<SkillSnapDbContext>(options =>
     options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
+        builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")
+    )
+);
 
-// --------------------------
-// Configure Identity
-// --------------------------
+builder.Services.AddScoped<DataSeeder>();
+
+// -------------------------------------------------------------
+// Identity (ApplicationUser + IdentityRole)
+// -------------------------------------------------------------
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequiredLength = 6;
@@ -28,9 +32,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<SkillSnapDbContext>()
 .AddDefaultTokenProviders();
 
-// --------------------------
-// Configure JWT Authentication
-// --------------------------
+// -------------------------------------------------------------
+// JWT Authentication
+// -------------------------------------------------------------
 builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddAuthentication(options =>
@@ -40,6 +44,9 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var key = builder.Configuration["Jwt:Key"] 
+              ?? throw new Exception("JWT Key missing in configuration");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -48,76 +55,86 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
-        )
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
     };
 });
 
-// --------------------------
-// Configure CORS for Blazor client
-// --------------------------
+// -------------------------------------------------------------
+// CORS (Blazor)
+// -------------------------------------------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:7053") // Update to your Blazor client URL
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.WithOrigins("https://localhost:7053")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
-// --------------------------
-// Add Controllers & Configure ModelState logging
-// --------------------------
+// -------------------------------------------------------------
+// Controllers + model state logging
+// -------------------------------------------------------------
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
         var builtInFactory = options.InvalidModelStateResponseFactory;
+
         options.InvalidModelStateResponseFactory = context =>
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             var request = context.HttpContext.Request;
 
-            logger.LogWarning("Invalid model state detected for request {Method} {Path}", request.Method, request.Path);
-            logger.LogDebug("Request headers: {Headers}", request.Headers);
+            logger.LogWarning("Invalid model state for request {Method} {Path}", request.Method, request.Path);
+            logger.LogDebug("Headers: {Headers}", request.Headers);
 
             return builtInFactory(context);
         };
     });
 
-// --------------------------
-// Add OpenAPI / Swagger
-// --------------------------
+// -------------------------------------------------------------
+// Swagger / OpenAPI
+// -------------------------------------------------------------
 builder.Services.AddOpenApi();
 
-// --------------------------
-// Configure Kestrel
-// --------------------------
+// -------------------------------------------------------------
+// Kestrel
+// -------------------------------------------------------------
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenLocalhost(7271, listenOptions =>
-    {
-        listenOptions.UseHttps();
-    });
-    options.ListenLocalhost(5169);
+    options.ListenLocalhost(7271, listenOptions => listenOptions.UseHttps());
+    options.ListenLocalhost(5169); // HTTP fallback
 });
 
+// -------------------------------------------------------------
+// Build App
+// -------------------------------------------------------------
 var app = builder.Build();
 
-// --------------------------
-// Configure HTTP pipeline
-// --------------------------
+// -------------------------------------------------------------
+// HTTP Pipeline
+// -------------------------------------------------------------
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
+  
 app.UseCors("BlazorClient");
 app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// -------------------------------------------------------------
+// Seed Data
+// -------------------------------------------------------------
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    await seeder.SeedAsync();
+}
 
 app.Run();
