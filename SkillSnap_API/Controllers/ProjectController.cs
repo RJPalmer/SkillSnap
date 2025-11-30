@@ -76,26 +76,60 @@ namespace SkillSnap_API.Controllers
         }
 
         // POST: api/Project
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<ProjectDto>> PostProject(ProjectCreateDto newProject)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var project = new Project{Title = newProject.Title, Description = newProject.Description, ImageUrl = newProject.ImageUrl};    
+            // Extract PortfolioUserId from JWT (UserContext equivalent on server)
+            var portfolioUserIdClaim = User.Claims.FirstOrDefault(c => c.Type == "portfolioUserId")?.Value;
+            if (string.IsNullOrEmpty(portfolioUserIdClaim))
+                return Unauthorized("No PortfolioUserId claim found.");
+
+            if (!int.TryParse(portfolioUserIdClaim, out var portfolioUserId))
+                return Unauthorized("Invalid PortfolioUserId claim.");
+
+            // Ensure PortfolioUser exists
+            var portfolioUser = await _context.PortfolioUsers
+                .Include(pu => pu.PortfolioUserProjects)
+                .FirstOrDefaultAsync(pu => pu.Id == portfolioUserId);
+
+            if (portfolioUser == null)
+                return NotFound($"PortfolioUser with ID {portfolioUserId} not found.");
+
+            // Create project
+            var project = new Project
+            {
+                Title = newProject.Title,
+                Description = newProject.Description,
+                ImageUrl = newProject.ImageUrl
+            };
+
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
+            // Create relationship entry
+            var link = new PortfolioUserProject
+            {
+                PortfolioUserId = portfolioUser.Id,
+                ProjectId = project.Id
+            };
+
+            _context.PortfolioUserProjects.Add(link);
+            await _context.SaveChangesAsync();
+
+            // Build DTO response
             var dto = new ProjectDto
             {
                 Id = project.Id,
                 Title = project.Title,
                 Description = project.Description,
                 ImageUrl = project.ImageUrl
-
             };
-            return CreatedAtAction("GetProject", new { id = dto.Id }, dto);
+
+            return CreatedAtAction(nameof(GetProject), new { id = dto.Id }, dto);
         }
 
         // DELETE: api/Project/5
@@ -126,11 +160,11 @@ namespace SkillSnap_API.Controllers
         /// <param name="projectId"></param>
         /// <returns></returns>
         [HttpPost("attach")]
-        public async Task<IActionResult> AttachProjectToUser([FromBody]PortfolioUserProjectCreateDto request)
+        public async Task<IActionResult> AttachProjectToUser([FromBody] PortfolioUserProjectCreateDto request)
         {
             // Check that both the user and project exist.
             var user = await _context.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
+                .Include(u => u.PortfolioUserProjects).ThenInclude(pup => pup.Project)
                 .FirstOrDefaultAsync(u => u.Id == request.PortfolioUserId);
 
             if (user == null)
@@ -139,16 +173,17 @@ namespace SkillSnap_API.Controllers
             var project = await _context.Projects.FindAsync(request.ProjectId);
             if (project == null)
                 return NotFound($"Project with ID {request.ProjectId} not found.");
-            
+
             //Add the project to the user’s list of projects
-            if (user.portfolioUserProjects.Any(p => p.Project.Id == request.ProjectId))
+            if (user.PortfolioUserProjects.Any(p => p.Project.Id == request.ProjectId))
                 return Conflict($"Project with ID {request.ProjectId} is already attached to User {request.PortfolioUserId}.");
 
-            user.portfolioUserProjects.Add(new PortfolioUserProject{
+            user.PortfolioUserProjects.Add(new PortfolioUserProject
+            {
                 PortfolioUser = user,
-                PortfolioUserId = user.Id,
+                // PortfolioUserId = user.Id,
                 Project = project,
-                ProjectId = project.Id
+                // ProjectId = project.Id
             });
 
             await _context.SaveChangesAsync();

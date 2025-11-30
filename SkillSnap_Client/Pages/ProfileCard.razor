@@ -1,47 +1,72 @@
 @page "/profile-card"
-@using SkillSnap.Shared.Models
+@using Microsoft.AspNetCore.Authorization
 @using SkillSnap.Shared.DTOs
 @using SkillSnap_Client.Services
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Threading.Tasks
 @inject ISkillSnapApiClient ApiClient
 @inject ILogger<ProfileCard> Logger
+@inject UserContext UserContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@attribute [Authorize]
 
 <h3>User Profile</h3>
 
-<div class="profile-card">
-    <img src="@GetProfileImage()" alt="Profile picture of @(editableProfile?.Name ?? userProfile?.Name ?? "Loading...")" class="profile-picture" />
+<AuthorizeView>
+    <Authorized>
+        @if (UserContext.CurrentPortfolioUser is null)
+        {
+            <p>Loading profile...</p>
+        }
+        else
+        {
+            <p>Welcome, @UserContext.CurrentPortfolioUser?.Name</p>
 
-    @if (isEditing)
-    {
-        <div class="edit-form">
-            <label>Name:</label>
-            <input @bind="editableProfile.Name" />
+            <div class="profile-card">
+                <img src="@GetProfileImage()"
+                     alt="Profile picture"
+                     class="profile-picture" />
 
-            <label>Bio:</label>
-            <textarea @bind="editableProfile.Bio"></textarea>
+                @if (isEditing && editableProfile != null)
+                {
+                    <div class="edit-form">
+                        <label>Name:</label>
+                        <input @bind="editableProfile.Name" />
 
-            <label>Profile Image URL:</label>
-            <input @bind="editableProfile.ProfileImageUrl" />
+                        <label>Bio:</label>
+                        <textarea @bind="editableProfile.Bio"></textarea>
 
-            <button @onclick="SaveProfile">Save</button>
-            <button @onclick="CancelEdit">Cancel</button>
-        </div>
-    }
-    else
-    {
-        <div class="profile-info">
-            <div class="info-row">
-                <strong>Name:</strong>
-                <span>@(userProfile?.Name ?? "Loading...")</span>
+                        <label>Profile Image URL:</label>
+                        <input @bind="editableProfile.ProfileImageUrl" />
+
+                        <button @onclick="SaveProfile">Save</button>
+                        <button @onclick="CancelEdit">Cancel</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="profile-info">
+                        <div class="info-row">
+                            <strong>Name:</strong>
+                            <span>@UserContext.CurrentPortfolioUser?.Name</span>
+                        </div>
+
+                        <div class="info-row">
+                            <strong>Bio:</strong>
+                            <span>@UserContext.CurrentPortfolioUser?.Bio</span>
+                        </div>
+
+                        <button @onclick="EnterEditMode">Edit Profile</button>
+                    </div>
+                }
             </div>
-            <div class="info-row">
-                <strong>Bio:</strong>
-                <span>@(userProfile?.Bio ?? "Fetching bio...")</span>
-            </div>
-            <button @onclick="EnterEditMode">Edit Profile</button>
-        </div>
-    }
-</div>
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <p>Please log in to view this page.</p>
+    </NotAuthorized>
+</AuthorizeView>
 
 @if (errorMessage != null)
 {
@@ -49,79 +74,86 @@
 }
 
 @code {
-    private PortfolioUserDto? userProfile;
     private string? errorMessage;
-
     private bool isEditing = false;
     private PortfolioUserDto? editableProfile;
 
     protected override async Task OnInitializedAsync()
     {
-        try
+        // Get Authentication State
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
         {
-            userProfile = await ApiClient.GetUserProfileAsync();
-            if (userProfile == null)
-            {
-                errorMessage = "Profile not found.";
-                Logger.LogWarning("Profile not found for current user");
-            }
+            Logger.LogInformation("User not authenticated — navigating to /authentication.");
+            Navigation.NavigateTo("/authentication");
+            return;
         }
-        catch (AccessTokenNotAvailableException)
+
+        // Load from UserContext (this resolves claims, token, and API pulling)
+        await UserContext.LoadAsync();
+
+        // If the user is authenticated but has no PortfolioUser → send them to select/create page
+        if (UserContext.CurrentPortfolioUser is null)
         {
-            Logger.LogInformation("User not authenticated, redirecting to login");
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Error loading profile. Please try again later.";
-            Logger.LogError(ex, "Error loading user profile");
+            Logger.LogWarning("Authenticated user has no PortfolioUser. Redirecting to /profile/select.");
+            Navigation.NavigateTo("/profile/select");
+            return;
         }
     }
 
     private string GetProfileImage()
     {
-        return (editableProfile?.ProfileImageUrl ?? userProfile?.ProfileImageUrl) ?? "/images/default_picture.jpeg";
+        return (editableProfile?.ProfileImageUrl 
+                ?? UserContext.CurrentPortfolioUser?.ProfileImageUrl)
+                ?? "/images/default_picture.jpeg";
     }
 
     private void EnterEditMode()
     {
-        if (userProfile != null)
+        if (UserContext.CurrentPortfolioUser is null)
+            return;
+
+        editableProfile = new PortfolioUserDto
         {
-            editableProfile = new PortfolioUserDto
-            {
-                Id = userProfile.Id,
-                Name = userProfile.Name,
-                Bio = userProfile.Bio,
-                ProfileImageUrl = userProfile.ProfileImageUrl
-            };
-            isEditing = true;
-            errorMessage = null;
-        }
+            Id = UserContext.CurrentPortfolioUser.Id,
+            Name = UserContext.CurrentPortfolioUser.Name,
+            Bio = UserContext.CurrentPortfolioUser.Bio,
+            ProfileImageUrl = UserContext.CurrentPortfolioUser.ProfileImageUrl
+        };
+
+        isEditing = true;
+        errorMessage = null;
     }
 
     private async Task SaveProfile()
     {
         try
         {
-            if (editableProfile != null)
-            {
-                // Basic validation
-                if (string.IsNullOrWhiteSpace(editableProfile.Name))
-                {
-                    errorMessage = "Name cannot be empty.";
-                    return;
-                }
+            if (editableProfile == null)
+                return;
 
-                var success = await ApiClient.UpdateUserProfileAsync(editableProfile.Id.ToString(), editableProfile);
-                if (success)
-                {
-                    userProfile = editableProfile;
-                    isEditing = false;
-                    errorMessage = null;
-                }
-                else
-                {
-                    errorMessage = "Failed to update profile.";
-                }
+            if (string.IsNullOrWhiteSpace(editableProfile.Name))
+            {
+                errorMessage = "Name cannot be empty.";
+                return;
+            }
+
+            var success = await ApiClient.UpdateUserProfileAsync(
+                editableProfile.Id.ToString(),
+                editableProfile
+            );
+
+            if (success)
+            {
+                UserContext.SetPortfolioUser(editableProfile);
+                isEditing = false;
+                errorMessage = null;
+            }
+            else
+            {
+                errorMessage = "Failed to update profile.";
             }
         }
         catch (Exception ex)

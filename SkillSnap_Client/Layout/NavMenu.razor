@@ -29,6 +29,13 @@
                 <span class="bi bi-card-checklist-nav-menu" aria-hidden="true"></span> Skill List
             </NavLink>
         </div>
+        <AuthorizeView Roles="Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/dashboard">
+                    <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Admin Dashboard
+                </NavLink>
+            </div>
+        </AuthorizeView>
     </nav>
 </div>
 

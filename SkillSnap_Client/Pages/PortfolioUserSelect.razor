@@ -1,0 +1,183 @@
+@page "/profile/select"
+@using SkillSnap.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@inject ISkillSnapApiClient ApiClient
+@inject UserContext UserContext
+@inject NavigationManager Nav
+@inject ILogger<PortfolioUserSelect> Logger
+@attribute [Authorize]
+
+<h3>Select Your Profile</h3>
+<p>Choose an existing profile or create a new one.</p>
+
+@if (isLoading)
+{
+    <p>Loading profiles...</p>
+}
+else if (unlinkedUsers.Count == 0)
+{
+    <p>No existing profiles found. <a href="/profile/create">Create a new profile</a>.</p>
+}
+else
+{
+    <div class="profile-list">
+        @foreach (var user in unlinkedUsers)
+        {
+            <div class="profile-card clickable" @onclick="() => SelectProfile(user.Id)">
+                <img src="@user.ProfileImageUrl" 
+                     alt="@user.Name's profile picture" 
+                     class="profile-picture" />
+                <div class="profile-info">
+                    <h4>@user.Name</h4>
+                    <p>@user.Bio</p>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="mt-3">
+        <a href="/profile/create" class="btn btn-secondary">Create New Profile</a>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@code {
+    private List<PortfolioUserDto> unlinkedUsers = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUnlinkedProfiles();
+    }
+
+    private async Task LoadUnlinkedProfiles()
+    {
+        try
+        {
+            var response = await ApiClient.GetUnlinkedPortfolioUsersAsync();
+            unlinkedUsers = response?.ToList() ?? new List<PortfolioUserDto>();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading unlinked profiles");
+            errorMessage = "Failed to load profiles. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectProfile(int portfolioUserId)
+    {
+        try
+        {
+            var success = await ApiClient.LinkPortfolioUserAsync(portfolioUserId);
+
+            if (!success)
+            {
+                errorMessage = "Failed to select profile. Please try again.";
+                return;
+            }
+
+            // Load the profile into UserContext
+            var profile = await ApiClient.GetUserProfileByIdAsync(portfolioUserId.ToString());
+            if (profile != null)
+            {
+                UserContext.SetPortfolioUser(profile);
+                Logger.LogInformation("Profile linked successfully: {ProfileId}", portfolioUserId);
+                Nav.NavigateTo("/profile-card");
+            }
+            else
+            {
+                errorMessage = "Profile selected but failed to load details.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error selecting profile");
+            errorMessage = "An error occurred while selecting your profile.";
+        }
+    }
+}
+
+<style>
+    .profile-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .profile-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #f9f9f9;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .profile-card.clickable {
+        cursor: pointer;
+    }
+
+    .profile-card.clickable:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .profile-picture {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 1rem;
+    }
+
+    .profile-info {
+        text-align: center;
+        width: 100%;
+    }
+
+    .profile-info h4 {
+        margin: 0.5rem 0;
+        font-weight: bold;
+    }
+
+    .profile-info p {
+        margin: 0.5rem 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .mt-3 {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .text-danger {
+        color: red;
+        margin-top: 1rem;
+    }
+</style>

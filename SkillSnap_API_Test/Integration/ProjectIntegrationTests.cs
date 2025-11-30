@@ -8,6 +8,7 @@ using SkillSnap_API.Controllers;
 using SkillSnap_API.Data;
 using SkillSnap.Shared.Models;
 using Xunit;
+using SkillSnap.Shared.DTOs;
 
 namespace SkillSnap_API_Test.Integration
 {
@@ -43,7 +44,7 @@ namespace SkillSnap_API_Test.Integration
             // Assert
             Assert.NotNull(result);
             var projects = result.Value;
-            Assert.Equal(2, projects.Count());
+            Assert.Equal(2, projects!.Count());
         }
 
         [Fact]
@@ -60,16 +61,21 @@ namespace SkillSnap_API_Test.Integration
 
             var controller = new ProjectController(dbContext);
 
+            var joinEntry = new PortfolioUserProjectCreateDto()
+            {
+                PortfolioUserId = 99,
+                ProjectId = 100
+            };
             // Act
-            var attachResult = await controller.AttachProjectToUser(99, 100);
+            var attachResult = await controller.AttachProjectToUser(joinEntry);
 
             // Assert
             var updatedUser = await dbContext.PortfolioUsers
-                .Include(u => u.portfolioUserProjects).ThenInclude(pup => pup.Project)
+                .Include(u => u.PortfolioUserProjects).ThenInclude(pup => pup.Project)
                 .FirstOrDefaultAsync(u => u.Id == 99);
 
             Assert.NotNull(updatedUser);
-            Assert.Contains(updatedUser.portfolioUserProjects, p => p.ProjectId == 100);
+            Assert.Contains(updatedUser.PortfolioUserProjects, p => p.ProjectId == 100);
         }
     }
 }

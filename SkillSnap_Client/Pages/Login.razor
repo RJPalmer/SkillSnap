@@ -1,0 +1,37 @@
+@page "/login"
+@using SkillSnap_Client.Services.Authentication
+@inject HttpClient Http
+@inject ITokenService TokenService
+@inject ApiAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+<input @bind="email" placeholder="Email" />
+<input @bind="password" type="password" placeholder="Password" />
+<button @onclick="LoginUser">Login</button>
+
+@code {
+    private string email = "";
+    private string password = "";
+
+    private async Task LoginUser()
+    {
+        var dto = new { Email = email, Password = password };
+        var result = await Http.PostAsJsonAsync("api/account/login", dto);
+
+        if (result.IsSuccessStatusCode)
+        {
+            var response = await result.Content.ReadFromJsonAsync<LoginResponse>();
+            await TokenService.SaveTokenAsync(response!.Token);
+
+            AuthStateProvider.NotifyUserAuthentication(response.Token);
+            Nav.NavigateTo("/");
+        }
+    }
+
+    public class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+    }
+}

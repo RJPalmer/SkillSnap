@@ -68,7 +68,7 @@ namespace SkillSnap_API_Test.Models
                 .ThenInclude(us => us.Skill)
                 .FirstOrDefaultAsync(u => u.Id == user.Id);
 
-            Assert.Single(result.PortfolioUserSkills);
+            Assert.Single(result!.PortfolioUserSkills);
             Assert.Equal("C#", result.PortfolioUserSkills.First().Skill.Name);
         }
     }

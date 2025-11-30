@@ -1,7 +1,74 @@
-﻿@page "/authentication/{action}"
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-<RemoteAuthenticatorView Action="@Action" />
+﻿@page "/authentication"
+@using SkillSnap_Client.Services.Authentication
+@inject HttpClient Http
+@inject ITokenService TokenService
+@inject ApiAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
 
-@code{
-    [Parameter] public string? Action { get; set; }
+<h3>Login</h3>
+
+<div class="login-form">
+    <div>
+        <label>Email</label>
+        <input @bind="email" placeholder="Email" />
+    </div>
+    <div>
+        <label>Password</label>
+        <input @bind="password" type="password" placeholder="Password" />
+    </div>
+    <button @onclick="LoginUser">Login</button>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+    }
+</div>
+
+@code {
+    private string email = "";
+    private string password = "";
+    private string errorMessage = "";
+
+    private async Task LoginUser()
+    {
+        errorMessage = "";
+        @* Http.BaseAddress = new Uri("https://localhost:7271"); *@
+        try
+        {
+            var loginDto = new { Email = email, Password = password };
+                var response = await Http.PostAsJsonAsync("api/account/login", loginDto);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = "Invalid email or password.";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            if (result?.Token == null)
+            {
+                errorMessage = "Login failed. No token returned.";
+                return;
+            }
+
+            await TokenService.SaveTokenAsync(result.Token);
+            AuthStateProvider.NotifyUserAuthentication(result.Token);
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login error: {ex.Message}";
+        }
+    }
+
+    private async Task LogoutUser()
+    {
+        await TokenService.RemoveTokenAsync();
+        AuthStateProvider.NotifyUserLogout();
+        Nav.NavigateTo("/authentication");
+    }
+
+    private class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+    }
 }

@@ -1,0 +1,69 @@
+@page "/register"
+@using SkillSnap_Client.Services.Authentication
+@using SkillSnap_Shared.DTOs.Account
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject ApiAuthenticationStateProvider AuthStateProvider
+
+@inject ITokenService TokenService
+
+<h3>Create an Account</h3>
+
+<div class="register-form">
+    <EditForm Model="Model" OnValidSubmit="RegisterUser">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <label>Email</label>
+        <InputText @bind-Value="Model.Email" class="form-control" />
+        <ValidationMessage For="@(() => Model.Email)" />
+
+        <label>Name</label>
+        <InputText @bind-Value="Model.Name" class="form-control" />
+        <ValidationMessage For="@(() => Model.Name)" />
+
+        <label>Password</label>
+        <InputText @bind-Value="Model.Password" type="password" class="form-control" />
+        <ValidationMessage For="@(() => Model.Password)" />
+
+        <label>Confirm Password</label>
+        <InputText @bind-Value="Model.ConfirmPassword" type="password" class="form-control" />
+        <ValidationMessage For="@(() => Model.ConfirmPassword)" />
+
+        <button type="submit">Register</button>
+
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <p class="text-danger">@Error</p>
+        }
+    </EditForm>
+</div>
+
+@code 
+{
+    private RegisterDto Model = new();
+    string Error = "";
+
+    private async Task RegisterUser()
+    {
+        var response = await Http.PostAsJsonAsync("api/account/register", Model);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Error = await response.Content.ReadAsStringAsync();
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+        if (result is null || string.IsNullOrEmpty(result.Token))
+        {
+            Error = "Registration succeeded but no token was returned.";
+            return;
+        }
+
+        await TokenService.SaveTokenAsync(result.Token);
+        AuthStateProvider.NotifyUserAuthentication(result.Token);
+
+        Nav.NavigateTo("/");
+    }
+}

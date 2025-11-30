@@ -61,7 +61,7 @@ namespace SkillSnap_API_Test.Models
             var result = await context.Skills.Include(s => s.SkillPortfolioUsers).FirstOrDefaultAsync();
 
             // Assert
-            Assert.Empty(result.SkillPortfolioUsers ?? new System.Collections.Generic.List<PortfolioUserSkill>());
+            Assert.Empty(result!.SkillPortfolioUsers ?? new System.Collections.Generic.List<PortfolioUserSkill>());
         }
     }
 }

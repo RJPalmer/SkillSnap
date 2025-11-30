@@ -1,11 +1,36 @@
-﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-@inject NavigationManager Navigation
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using SkillSnap_Client.Services.Authentication
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ITokenService TokenService
+@inject NavigationManager Nav
 
+<AuthorizeView>
+    <Authorized>
+        <!-- When the user IS authenticated -->
+        <button @onclick="Logout">Logout</button>
+    </Authorized>
 
+    <NotAuthorized>
+        <!-- When the user is NOT authenticated -->
+        <button @onclick="Login">Login</button>
+        <button @onclick="Register">Register</button>
+    </NotAuthorized>
+</AuthorizeView>
 
-@code{
-    public void BeginLogOut()
+@code {
+    private void Login()
     {
-        Navigation.NavigateToLogout("authentication/logout");
+        Nav.NavigateTo("/authentication");
+    }
+
+    private async Task Logout()
+    {
+        await TokenService.RemoveTokenAsync();
+        ((ApiAuthenticationStateProvider)AuthStateProvider).NotifyUserLogout();
+        Nav.NavigateTo("/authentication");
+    }
+
+    private void Register(){
+       Nav.NavigateTo("/register");
     }
 }

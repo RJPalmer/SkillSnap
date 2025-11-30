@@ -1,0 +1,91 @@
+@page "/profile/create"
+@inject ISkillSnapApiClient ApiClient
+@inject UserContext UserContext
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Nav
+@inject ILogger<CreateProfile> Logger
+
+<PageTitle>Create Profile</PageTitle>
+
+<h3>Create Your Profile</h3>
+<p>Finish setting up your SkillSnap profile.</p>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <EditForm Model="@model" OnValidSubmit="SubmitProfile">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Name</label>
+            <InputText class="form-control" @bind-Value="model.Name" />
+        </div>
+
+        <div class="mb-3">
+            <label>Bio</label>
+            <InputTextArea class="form-control" @bind-Value="model.Bio" />
+        </div>
+
+        <div class="mb-3">
+            <label>Profile Image URL</label>
+            <InputText class="form-control" @bind-Value="model.ProfileImageUrl" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Create Profile</button>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+    }
+}
+
+@code {
+    private PortfolioUserCreateDto model = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PrePopulateFields();
+        isLoading = false;
+    }
+
+    private async Task PrePopulateFields()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        model.Name = user.FindFirst("unique_name")?.Value ?? "";
+        model.ProfileImageUrl = "/images/default_profile.png"; // fallback
+        // You could store email separately if needed.
+    }
+
+    private async Task SubmitProfile()
+    {
+        try
+        {
+            var created = await ApiClient.CreatePortfolioUserAsync(model);
+
+            if (created is null)
+            {
+                errorMessage = "Failed to create profile.";
+                return;
+            }
+
+            UserContext.SetPortfolioUser(created);
+            Logger.LogInformation("Profile created successfully for user {ProfileId}", created.Id);
+            
+            Nav.NavigateTo("/profile-card");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating profile");
+            errorMessage = "An error occurred while creating your profile.";
+        }
+    }
+}

@@ -77,11 +77,11 @@ namespace SkillSnap_API_Test.Models
 
             // Act
             var result = await context.Projects
-                .Include(p => p.portfolioUserProjects)
+                .Include(p => p.PortfolioUserProjects)
                 .FirstOrDefaultAsync();
 
             // Assert
-            Assert.Empty(result.portfolioUserProjects ?? new System.Collections.Generic.List<PortfolioUserProject>());
+            Assert.Empty(result!.PortfolioUserProjects ?? new System.Collections.Generic.List<PortfolioUserProject>());
         }
     }
 }
