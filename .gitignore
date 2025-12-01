@@ -25,3 +25,4 @@ SkillSnap_API/skillsnap.db
 SkillSnap_API/skillsnap.db-shm
 SkillSnap_API/skillsnap.db-wal
 SkillSnap_API/Performance/perf.log
+SkillSnap_API/skillsnap.db
