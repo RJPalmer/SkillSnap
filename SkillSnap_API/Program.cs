@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SkillSnap_API.Services;
 using Microsoft.Extensions.Caching.Memory;
+using SkillSnap_API.Performance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -127,6 +128,8 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenLocalhost(5169); // HTTP fallback
 });
 
+builder.Services.AddSingleton<PerformanceLoggerService>();
+
 // -------------------------------------------------------------
 // Build App
 // -------------------------------------------------------------
@@ -146,7 +149,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseMiddleware<PerformanceMiddleware>();
 app.MapControllers();
 
 // -------------------------------------------------------------

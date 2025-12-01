@@ -6,6 +6,7 @@ using SkillSnap_Client;
 using SkillSnap_Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using SkillSnap_Client.Services.Authentication;
+using SkillSnap_Client.Performance;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -50,5 +51,10 @@ builder.Services.AddScoped(sp =>
 //
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<UserContext>();
+builder.Services.AddSingleton<PerformanceClientLoggerService>();
+builder.Services.AddTransient<PerformanceHttpHandler>();
+
+builder.Services.AddHttpClient<ISkillSnapApiClient, SkillSnapApiClient>()
+    .AddHttpMessageHandler<PerformanceHttpHandler>();
 
 await builder.Build().RunAsync();
