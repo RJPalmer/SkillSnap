@@ -36,13 +36,17 @@ namespace SkillSnap_API_Test.Controllers
         {
             var store = new Mock<IUserStore<ApplicationUser>>();
             return new Mock<UserManager<ApplicationUser>>(
-                store.Object, null, null, null, null, null, null, null, null
+                store.Object, nullm kl, mil, null, null, null, null, null, null, null
             );
         }
 
         private Mock<JwtTokenService> CreateJwtMock()
         {
-            return new Mock<JwtTokenService>(null, null);
+            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+            // Default config returns null for any key used in tests; tests that need token generation stub the method.
+            mockConfig.Setup(c => c[It.IsAny<string>()]).Returns((string?)null);
+            var userManagerMock = CreateUserManagerMock();
+            return new Mock<JwtTokenService>(mockConfig.Object, userManagerMock.Object);
         }
 
         // -----------------------------------------------------------
@@ -52,9 +56,8 @@ namespace SkillSnap_API_Test.Controllers
         public async Task GetAll_ReturnsAllUsers()
         {
             var db = CreateDbContext();
-            db.PortfolioUsers.Add(new /* `PortfolioUser` seems to be a model class representing a user's portfolio information. It contains properties such as `Id`, `Name`, `Bio`, and possibly `ProfileImageUrl`. The tests in the `PortfolioUserControllerTests` class are testing various functionalities related to managing and interacting with `PortfolioUser` data, such as retrieving all users, getting a user by ID or name, creating a new user, updating user information, deleting a user, and linking a portfolio user to an application user. */
-            PortfolioUser { Id = 1, Name = "User1", Bio = "Bio1" });
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 2, Name = "User2", Bio = "Bio2" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "User1", Bio = "Bio1", ProfileImageUrl = "" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 2, Name = "User2", Bio = "Bio2", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
             var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
@@ -74,7 +77,7 @@ namespace SkillSnap_API_Test.Controllers
         {
             var db = CreateDbContext();
 
-            var user = new PortfolioUser { Id = 10, Name = "TestUser", Bio = "Bio" };
+            var user = new PortfolioUser { Id = 10, Name = "TestUser", Bio = "Bio", ProfileImageUrl = "" };
             db.PortfolioUsers.Add(user);
             await db.SaveChangesAsync();
 
@@ -107,7 +110,7 @@ namespace SkillSnap_API_Test.Controllers
         {
             var db = CreateDbContext();
 
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "Alpha", Bio = "Bio" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "Alpha", Bio = "Bio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
             var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
@@ -165,7 +168,7 @@ namespace SkillSnap_API_Test.Controllers
         {
             var db = CreateDbContext();
 
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 5, Name = "Old", Bio = "OldBio" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 5, Name = "Old", Bio = "OldBio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
             var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
@@ -204,7 +207,7 @@ namespace SkillSnap_API_Test.Controllers
         public async Task Delete_RemovesUser_WhenExists()
         {
             var db = CreateDbContext();
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 3, Name = "DeleteMe" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 3, Name = "DeleteMe", Bio = "", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
             var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
@@ -235,7 +238,7 @@ namespace SkillSnap_API_Test.Controllers
         {
             var db = CreateDbContext();
 
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 55, Name = "Self", Bio = "UserBio" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 55, Name = "Self", Bio = "UserBio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
             var jwt = CreateJwtMock();
@@ -264,7 +267,7 @@ namespace SkillSnap_API_Test.Controllers
         {
             var db = CreateDbContext();
 
-            var portfolioUser = new PortfolioUser { Id = 88, Name = "PU" };
+            var portfolioUser = new PortfolioUser { Id = 88, Name = "PU", Bio = "", ProfileImageUrl = "" };
             db.PortfolioUsers.Add(portfolioUser);
 
             var appUser = new ApplicationUser { Id = "app123", Email = "test@test.com" };
@@ -272,15 +275,21 @@ namespace SkillSnap_API_Test.Controllers
 
             await db.SaveChangesAsync();
 
-            var jwt = CreateJwtMock();
-            
-            jwt.Setup(j => j.GenerateToken(It.IsAny<ApplicationUser>())).ReturnsAsync("NEW_TOKEN");
-    
+            // Create a real JwtTokenService configured with a test signing key so we can exercise token generation.
+            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+            mockConfig.Setup(c => c["Jwt:Key"]).Returns(new string('x', 32));
+            mockConfig.Setup(c => c["Jwt:Issuer"]).Returns("test");
+            mockConfig.Setup(c => c["Jwt:Audience"]).Returns("test");
+            mockConfig.Setup(c => c["Jwt:ExpiresInMinutes"]).Returns("60");
+
             var userManager = CreateUserManagerMock();
             userManager.Setup(m => m.FindByIdAsync("app123")).ReturnsAsync(appUser);
             userManager.Setup(m => m.UpdateAsync(appUser)).ReturnsAsync(IdentityResult.Success);
+            userManager.Setup(m => m.GetRolesAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<string>());
 
-            var controller = new PortfolioUserController(db, userManager.Object, jwt.Object);
+            var jwtService = new JwtTokenService(mockConfig.Object, userManager.Object);
+
+            var controller = new PortfolioUserController(db, userManager.Object, jwtService);
 
             controller.ControllerContext = new ControllerContext
             {
@@ -292,7 +301,7 @@ namespace SkillSnap_API_Test.Controllers
             var ok = Assert.IsType<OkObjectResult>(result);
             var response = Assert.IsType<LinkPortfolioUserResponseDto>(ok.Value);
 
-            Assert.Equal("NEW_TOKEN", response.Token);
+            Assert.False(string.IsNullOrWhiteSpace(response.Token));
             Assert.Equal(88, response.PortfolioUserId);
         }
 

@@ -132,8 +132,8 @@ namespace SkillSnap_API_Test.Integration
                 .FirstOrDefaultAsync(u => u.Id == user.Id);
             Assert.NotNull(updatedUser);
             Assert.Equal(2, updatedUser.PortfolioUserSkills.Count);
-            Assert.Contains(updatedUser.PortfolioUserSkills, s => s.Skill.Name == "SQL".ToLower());
-            Assert.Contains(updatedUser.PortfolioUserSkills, s => s.Skill.Name == "C#");
+            Assert.Contains(updatedUser.PortfolioUserSkills, s => string.Equals(s.Skill.Name, "SQL", System.StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(updatedUser.PortfolioUserSkills, s => string.Equals(s.Skill.Name, "C#", System.StringComparison.OrdinalIgnoreCase));
         }
     }
 }

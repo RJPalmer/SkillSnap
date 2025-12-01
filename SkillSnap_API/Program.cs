@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SkillSnap_API.Services;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,26 @@ builder.Services.AddDbContext<SkillSnapDbContext>(options =>
 );
 
 builder.Services.AddScoped<DataSeeder>();
+
+// -------------------------------------------------------------
+// In-Memory Caching
+// -------------------------------------------------------------
+builder.Services.AddMemoryCache(options =>
+{
+    // Set default cache size to 1000 entries
+    options.CompactionPercentage = 0.25;
+    options.SizeLimit = 1024 * 5; // 5 MB
+});
+
+// Configure cache options with expiration
+builder.Services.Configure<MemoryCacheOptions>(options =>
+{
+    // Track statistics for monitoring (can be queried later)
+    options.CompactionPercentage = 0.25;
+});
+
+// Register cache service
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 // -------------------------------------------------------------
 // Identity (ApplicationUser + IdentityRole)
