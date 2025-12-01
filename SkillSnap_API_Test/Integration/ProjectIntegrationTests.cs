@@ -9,6 +9,10 @@ using SkillSnap_API.Data;
 using SkillSnap.Shared.Models;
 using Xunit;
 using SkillSnap.Shared.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
+using SkillSnap_API.Services;
+using Microsoft.Extensions.Logging;
 
 namespace SkillSnap_API_Test.Integration
 {
@@ -36,15 +40,16 @@ namespace SkillSnap_API_Test.Integration
             );
             await dbContext.SaveChangesAsync();
 
-            var controller = new ProjectController(dbContext);
+            var cacheService = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger = new Mock<ILogger<ProjectController>>();
+            var controller = new ProjectController(dbContext, cacheService, mockLogger.Object);
 
             // Act
             var result = await controller.GetProjects();
 
             // Assert
-            Assert.NotNull(result);
-            var projects = result.Value;
-            Assert.Equal(2, projects!.Count());
+            var projects = Assert.IsAssignableFrom<IEnumerable<ProjectDto>>(result);
+            Assert.Equal(2, projects.Count());
         }
 
         [Fact]
@@ -59,7 +64,9 @@ namespace SkillSnap_API_Test.Integration
             dbContext.Projects.Add(project);
             await dbContext.SaveChangesAsync();
 
-            var controller = new ProjectController(dbContext);
+            var cacheService2 = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger2 = new Mock<ILogger<ProjectController>>();
+            var controller = new ProjectController(dbContext, cacheService2, mockLogger2.Object);
 
             var joinEntry = new PortfolioUserProjectCreateDto()
             {

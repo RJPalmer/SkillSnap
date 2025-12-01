@@ -7,6 +7,9 @@ using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
 using Xunit;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using SkillSnap_API.Services;
+using Microsoft.Extensions.Logging;
 
 namespace SkillSnap_API_Test.Integration
 {
@@ -33,7 +36,9 @@ namespace SkillSnap_API_Test.Integration
                 new Skill { Name = "SQL", Level = "Intermediate" }
             );
             await context.SaveChangesAsync();
-            var controller = new SkillController(context);
+                var cacheService = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger = new Mock<ILogger<SkillController>>();
+            var controller = new SkillController(context, cacheService, mockLogger.Object);
 
             // Act
             var result = await controller.GetAll();
@@ -50,7 +55,9 @@ namespace SkillSnap_API_Test.Integration
         {
             // Arrange
             var context = GetInMemoryDbContext();
-            var controller = new SkillController(context);
+                var cacheService2 = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger2 = new Mock<ILogger<SkillController>>();
+            var controller = new SkillController(context, cacheService2, mockLogger2.Object);
             var newSkill = new SkillCreateDto { Name = "Python", Level = "Beginner" };
 
             // Act
@@ -71,7 +78,9 @@ namespace SkillSnap_API_Test.Integration
             var skill = new Skill { Name = "ToDelete", Level = "Advanced" };
             context.Skills.Add(skill);
             await context.SaveChangesAsync();
-            var controller = new SkillController(context);
+                var cacheService3 = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger3 = new Mock<ILogger<SkillController>>();
+            var controller = new SkillController(context, cacheService3, mockLogger3.Object);
 
             // Act
             var result = await controller.Delete(skill.Id);

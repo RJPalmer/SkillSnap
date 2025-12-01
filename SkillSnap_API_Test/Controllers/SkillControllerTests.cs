@@ -3,12 +3,16 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SkillSnap_API.Controllers;
 using SkillSnap_API.Data;
+using SkillSnap_API.Services;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
 using Xunit;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using Microsoft.Extensions.Logging;
 
 namespace SkillSnap_API_Test.Controllers;
+
 public class SkillControllerTests
 {
     private SkillSnapDbContext GetInMemoryDbContext()
@@ -22,6 +26,13 @@ public class SkillControllerTests
         return context;
     }
 
+        private SkillController CreateController(SkillSnapDbContext context)
+        {
+            var cacheService = new SkillSnap_API_Test.Utils.TestCacheService();
+            var mockLogger = new Mock<ILogger<SkillController>>();
+            return new SkillController(context, cacheService, mockLogger.Object);
+        }
+
     [Fact]
     public async Task GetAll_ReturnsListOfSkills()
     {
@@ -33,12 +44,12 @@ public class SkillControllerTests
         );
         await context.SaveChangesAsync();
 
-        var controller = new SkillController(context);
+        var controller = CreateController(context);
 
         // Act
         var result = await controller.GetAll();
-        var caaResult = Assert.IsType<OkObjectResult>(result.Result);
-        var skillDtoItem = Assert.IsAssignableFrom<IEnumerable<SkillDto>>(caaResult.Value);
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var skillDtoItem = Assert.IsAssignableFrom<IEnumerable<SkillDto>>(okResult.Value);
 
         // Assert
         Assert.NotNull(result);
@@ -47,18 +58,20 @@ public class SkillControllerTests
         Assert.Contains(skills, s => s.Name == "C#");
         Assert.Contains(skills, s => s.Name == "JavaScript");
     }
+
     [Fact]
     public async Task Create_ReturnsCreatedSkill()
     {
         // Arrange
         using var context = GetInMemoryDbContext();
-        var controller = new SkillController(context);
+        var controller = CreateController(context);
         var newSkillDto = new SkillCreateDto { Name = "Python", Level = "Beginner" };
 
         // Act
         var createdSkill = await controller.Create(newSkillDto);
-        var caaResult = Assert.IsType<CreatedAtActionResult>(createdSkill.Result);
-        var skillDtoItem = Assert.IsType<SkillDto>(caaResult.Value);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(createdSkill.Result);
+        var skillDtoItem = Assert.IsType<SkillDto>(createdResult.Value);
+        
         // Assert
         Assert.NotNull(skillDtoItem);
         Assert.Equal("Python", skillDtoItem.Name);
@@ -68,6 +81,7 @@ public class SkillControllerTests
         Assert.NotNull(skillInDb);
         Assert.Equal("Python", skillInDb.Name);
     }
+
     [Fact]
     public async Task Delete_RemovesSkill_AndJoinEntries()
     {
@@ -86,7 +100,7 @@ public class SkillControllerTests
         context.PortfolioUserSkills.Add(userSkill);
         await context.SaveChangesAsync();
 
-        var controller = new SkillController(context);
+        var controller = CreateController(context);
 
         // Act
         await controller.Delete(skill.Id);
