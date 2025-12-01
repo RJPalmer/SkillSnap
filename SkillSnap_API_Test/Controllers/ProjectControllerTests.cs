@@ -71,8 +71,8 @@ namespace SkillSnap_API_Test.Controllers
             var result = await controller.GetProject(1);
 
             // Assert
-            var ok = Assert.IsType<OkObjectResult>(result.Result);
-            var dto = Assert.IsType<ProjectDto>(ok.Value);
+            var OkResult = new OkObjectResult(result.Value);
+            var dto = Assert.IsType<ProjectDto>(OkResult.Value);
             Assert.Equal("Test Project", dto.Title);
         }
 

@@ -48,8 +48,7 @@ namespace SkillSnap_API_Test.Integration
             var result = await controller.GetProjects();
 
             // Assert
-            var ok = Assert.IsType<OkObjectResult>(result.Result);
-            var projects = Assert.IsAssignableFrom<IEnumerable<ProjectDto>>(ok.Value);
+            var projects = Assert.IsAssignableFrom<IEnumerable<ProjectDto>>(result);
             Assert.Equal(2, projects.Count());
         }
 
