@@ -117,7 +117,10 @@ public class AccountController : ControllerBase
 
         if (!result.Succeeded)
             return Unauthorized("Invalid email or password");
-
+        
+         //update last login time
+        //  = DateTime.UtcNow;
+        // await _userManager.UpdateAsync(user);
         var portfolioUser = await _context.PortfolioUsers
             .FirstOrDefaultAsync(pu => pu.ApplicationUserId == user.Id);
         if (portfolioUser != null)
@@ -133,6 +136,8 @@ public class AccountController : ControllerBase
             Email = user.Email ?? string.Empty,
             Expiration = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpiresInMinutes"] ?? "60"))
         });
+
+       
     }
 
     // ===========================

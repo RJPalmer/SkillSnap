@@ -97,7 +97,8 @@ public class CacheService : ICacheService
         var cacheOptions = new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(expirationMinutes),
-            SlidingExpiration = TimeSpan.FromMinutes(5) // Reset expiration on access
+            SlidingExpiration = TimeSpan.FromMinutes(5), // Reset expiration on access
+            Size = 1 // Assign a size; each entry counts as 1 unit (required when SizeLimit is set)
         };
 
         _memoryCache.Set(key, value, cacheOptions);

@@ -11,6 +11,8 @@ using SkillSnap_API.Data;
 using SkillSnap_API.Services;
 using SkillSnap.Shared.Models;
 using SkillSnap.Shared.DTOs;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 
 namespace SkillSnap_API_Test.Integration
 {
@@ -27,17 +29,48 @@ namespace SkillSnap_API_Test.Integration
             return context;
         }
 
+        ///<summary>
+        /// Mocks the UserManager for testing purposes.
+        /// </summary>
         private UserManager<ApplicationUser> MockUserManager()
         {
             var store = new Mock<IUserStore<ApplicationUser>>();
+            var mockOptions = new Mock<Microsoft.Extensions.Options.IOptions<IdentityOptions>>();
+            mockOptions.Setup(o => o.Value).Returns(new IdentityOptions());
+
+            var mockPasswordHasher = new Mock<IPasswordHasher<ApplicationUser>>();
+            var mockUserValidators = new[] { new Mock<IUserValidator<ApplicationUser>>().Object };
+            var mockPasswordValidators = new[] { new Mock<IPasswordValidator<ApplicationUser>>().Object };
+            var mockKeyNormalizer = new Mock<ILookupNormalizer>();
+            var mockErrors = new IdentityErrorDescriber();
+            var mockLogger = new Mock<ILogger<UserManager<ApplicationUser>>>();
+            var mockServiceProvider = new Mock<IServiceProvider>();
+
             return new UserManager<ApplicationUser>(
-                store.Object, null, null, null, null, null, null, null, null);
+                store.Object,
+                mockOptions.Object,              // FIXED: not null
+                mockPasswordHasher.Object,
+                mockUserValidators,
+                mockPasswordValidators,
+                mockKeyNormalizer.Object,
+                mockErrors,
+                mockServiceProvider.Object,      // FIXED: not null
+                mockLogger.Object
+            );
         }
 
         private JwtTokenService MockJwtTokenService()
         {
-            var mock = new Mock<JwtTokenService>(null, null);
-            return mock.Object;
+            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+
+            // Provide real values – not null
+            mockConfig.Setup(c => c["Jwt:Key"]).Returns("THIS_IS_A_TEST_KEY_32_CHARS_MINIMUM_1234");
+            mockConfig.Setup(c => c["Jwt:Issuer"]).Returns("TestIssuer");
+            mockConfig.Setup(c => c["Jwt:Audience"]).Returns("TestAudience");
+            mockConfig.Setup(c => c["Jwt:ExpiresInMinutes"]).Returns("60");
+            var userManagerMock = MockUserManager();
+            var jwt = new JwtTokenService(mockConfig.Object, userManagerMock);
+            return jwt;
         }
 
         // ------------------------------------------------------------
@@ -116,7 +149,7 @@ namespace SkillSnap_API_Test.Integration
         public async Task UpdateUserSkills_AddsNewSkills()
         {
             var context = GetInMemoryDbContext();
-            var user = new PortfolioUser { Name = "User With Skills", Bio = "User Bio", ProfileImageUrl ="ImageURL 1" };
+            var user = new PortfolioUser { Name = "User With Skills", Bio = "User Bio", ProfileImageUrl = "ImageURL 1" };
             var skill = new Skill { Name = "C#", Level = "Beginner" };
             context.PortfolioUsers.Add(user);
             context.Skills.Add(skill);

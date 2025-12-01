@@ -15,11 +15,17 @@ using SkillSnap.Shared.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using SkillSnap.Shared.DTOs.Account;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace SkillSnap_API_Test.Controllers
 {
     public class PortfolioUserControllerTests
     {
+        // ----------------------------------------------------------------------
+        // Helpers
+        // ----------------------------------------------------------------------
+
         private SkillSnapDbContext CreateDbContext()
         {
             var options = new DbContextOptionsBuilder<SkillSnapDbContext>()
@@ -28,66 +34,99 @@ namespace SkillSnap_API_Test.Controllers
 
             var db = new SkillSnapDbContext(options);
             db.Database.EnsureCreated();
-
             return db;
         }
 
         private Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
         {
             var store = new Mock<IUserStore<ApplicationUser>>();
+
+            var options = Options.Create(new IdentityOptions());
+            var passwordHasher = new Mock<IPasswordHasher<ApplicationUser>>();
+            var userValidators = new List<IUserValidator<ApplicationUser>>() { new Mock<IUserValidator<ApplicationUser>>().Object };
+            var pwdValidators = new List<IPasswordValidator<ApplicationUser>>() { new Mock<IPasswordValidator<ApplicationUser>>().Object };
+            var keyNormalizer = new Mock<ILookupNormalizer>();
+            var errors = new IdentityErrorDescriber();
+            var serviceProvider = new Mock<IServiceProvider>();
+            var logger = new Mock<ILogger<UserManager<ApplicationUser>>>();
+
             return new Mock<UserManager<ApplicationUser>>(
-                store.Object, null, null, null, null, null, null, null, null
+                store.Object,
+                options,
+                passwordHasher.Object,
+                userValidators,
+                pwdValidators,
+                keyNormalizer.Object,
+                errors,
+                serviceProvider.Object,
+                logger.Object
             );
         }
 
-        private Mock<JwtTokenService> CreateJwtMock()
+        private JwtTokenService CreateRealJwtService(UserManager<ApplicationUser> userManager)
         {
-            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
-            // Default config returns null for any key used in tests; tests that need token generation stub the method.
-            mockConfig.Setup(c => c[It.IsAny<string>()]).Returns((string?)null);
-            var userManagerMock = CreateUserManagerMock();
-            return new Mock<JwtTokenService>(mockConfig.Object, userManagerMock.Object);
+            var cfg = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+
+            cfg.Setup(c => c["Jwt:Key"]).Returns(new string('x', 32));
+            cfg.Setup(c => c["Jwt:Issuer"]).Returns("test");
+            cfg.Setup(c => c["Jwt:Audience"]).Returns("test");
+            cfg.Setup(c => c["Jwt:ExpiresInMinutes"]).Returns("60");
+
+            return new JwtTokenService(cfg.Object, userManager);
         }
 
-        // -----------------------------------------------------------
-        // GET ALL
-        // -----------------------------------------------------------
+        private static HttpContext FakeHttpContextWithClaim(string type, string value)
+        {
+            var ctx = new DefaultHttpContext();
+
+            ctx.User = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    new List<Claim> { new Claim(type, value) },
+                    authenticationType: "TestAuth"
+                )
+            );
+
+            return ctx;
+        }
+
+        // ----------------------------------------------------------------------
+        // TESTS: GET ALL
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task GetAll_ReturnsAllUsers()
         {
             var db = CreateDbContext();
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "User1", Bio = "Bio1", ProfileImageUrl = "" });
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 2, Name = "User2", Bio = "Bio2", ProfileImageUrl = "" });
+
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "U1", Bio = "B1", ProfileImageUrl = "" });
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 2, Name = "U2", Bio = "B2", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var result = await controller.GetAll();
+            var result = await ctrl.GetAll();
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var dtos = Assert.IsAssignableFrom<IEnumerable<PortfolioUserDto>>(ok.Value);
 
             Assert.Equal(2, dtos.Count());
         }
 
-        // -----------------------------------------------------------
-        // GET BY ID
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: GET BY ID
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task GetById_ReturnsUser_WhenExists()
         {
             var db = CreateDbContext();
 
-            var user = new PortfolioUser { Id = 10, Name = "TestUser", Bio = "Bio", ProfileImageUrl = "" };
-            db.PortfolioUsers.Add(user);
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 10, Name = "TestUser", Bio = "Bio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var result = await controller.GetById(10);
+            var result = await ctrl.GetById(10);
 
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var dto = Assert.IsType<PortfolioUserDto>(ok.Value);
-
             Assert.Equal("TestUser", dto.Name);
         }
 
@@ -95,16 +134,16 @@ namespace SkillSnap_API_Test.Controllers
         public async Task GetById_ReturnsNotFound_WhenMissing()
         {
             var db = CreateDbContext();
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var result = await controller.GetById(999);
+            var result = await ctrl.GetById(999);
 
             Assert.IsType<NotFoundResult>(result.Result);
         }
 
-        // -----------------------------------------------------------
-        // GET BY NAME
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: GET BY NAME
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task GetByName_ReturnsUser_WhenExists()
         {
@@ -113,9 +152,9 @@ namespace SkillSnap_API_Test.Controllers
             db.PortfolioUsers.Add(new PortfolioUser { Id = 1, Name = "Alpha", Bio = "Bio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var result = await controller.GetByName("Alpha");
+            var result = await ctrl.GetByName("Alpha");
 
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var dto = Assert.IsType<PortfolioUserDto>(ok.Value);
@@ -127,22 +166,21 @@ namespace SkillSnap_API_Test.Controllers
         public async Task GetByName_ReturnsNotFound_WhenMissing()
         {
             var db = CreateDbContext();
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
-
-            var result = await controller.GetByName("DoesNotExist");
+            var result = await ctrl.GetByName("DoesNotExist");
 
             Assert.IsType<NotFoundResult>(result.Result);
         }
 
-        // -----------------------------------------------------------
-        // CREATE
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: CREATE
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task Create_ReturnsCreated_WhenValid()
         {
             var db = CreateDbContext();
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
             var input = new PortfolioUserCreateDto
             {
@@ -151,7 +189,7 @@ namespace SkillSnap_API_Test.Controllers
                 ProfileImageUrl = "img.png"
             };
 
-            var result = await controller.Create(input);
+            var result = await ctrl.Create(input);
 
             var created = Assert.IsType<CreatedAtActionResult>(result.Result);
             var dto = Assert.IsType<PortfolioUserDto>(created.Value);
@@ -160,9 +198,9 @@ namespace SkillSnap_API_Test.Controllers
             Assert.Equal(1, db.PortfolioUsers.Count());
         }
 
-        // -----------------------------------------------------------
-        // UPDATE
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: UPDATE
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task Update_ReturnsNoContent_WhenUpdated()
         {
@@ -171,15 +209,16 @@ namespace SkillSnap_API_Test.Controllers
             db.PortfolioUsers.Add(new PortfolioUser { Id = 5, Name = "Old", Bio = "OldBio", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
             var input = new PortfolioUserCreateDto
             {
                 Name = "Updated",
-                Bio = "UpdatedBio"
+                Bio = "UpdatedBio",
+                ProfileImageUrl = "img2.png"
             };
 
-            var result = await controller.Update(5, input);
+            var result = await ctrl.Update(5, input);
 
             Assert.IsType<NoContentResult>(result);
 
@@ -191,18 +230,18 @@ namespace SkillSnap_API_Test.Controllers
         public async Task Update_ReturnsNotFound_WhenMissing()
         {
             var db = CreateDbContext();
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
             var input = new PortfolioUserCreateDto { Name = "DoesNotMatter" };
 
-            var result = await controller.Update(999, input);
+            var result = await ctrl.Update(999, input);
 
             Assert.IsType<NotFoundResult>(result);
         }
 
-        // -----------------------------------------------------------
-        // DELETE
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: DELETE
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task Delete_RemovesUser_WhenExists()
         {
@@ -210,9 +249,9 @@ namespace SkillSnap_API_Test.Controllers
             db.PortfolioUsers.Add(new PortfolioUser { Id = 3, Name = "DeleteMe", Bio = "", ProfileImageUrl = "" });
             await db.SaveChangesAsync();
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var result = await controller.Delete(3);
+            var result = await ctrl.Delete(3);
 
             Assert.IsType<NoContentResult>(result);
             Assert.Empty(db.PortfolioUsers);
@@ -222,36 +261,36 @@ namespace SkillSnap_API_Test.Controllers
         public async Task Delete_ReturnsNotFound_WhenMissing()
         {
             var db = CreateDbContext();
+            var ctrl = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateRealJwtService(CreateUserManagerMock().Object));
 
-            var controller = new PortfolioUserController(db, CreateUserManagerMock().Object, CreateJwtMock().Object);
-
-            var result = await controller.Delete(123);
+            var result = await ctrl.Delete(123);
 
             Assert.IsType<NotFoundResult>(result);
         }
 
-        // -----------------------------------------------------------
-        // GET MY PROFILE
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: GET MY PROFILE
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task GetMyProfile_ReturnsProfile_WhenClaimMatches()
         {
             var db = CreateDbContext();
 
-            db.PortfolioUsers.Add(new PortfolioUser { Id = 55, Name = "Self", Bio = "UserBio", ProfileImageUrl = "" });
+            var user = new PortfolioUser { Id = 55, Name = "Self", Bio = "UserBio", ProfileImageUrl = "" };
+            db.PortfolioUsers.Add(user);
             await db.SaveChangesAsync();
 
-            var jwt = CreateJwtMock();
             var userManager = CreateUserManagerMock();
+            var jwt = CreateRealJwtService(userManager.Object);
 
-            var controller = new PortfolioUserController(db, userManager.Object, jwt.Object);
+            var ctrl = new PortfolioUserController(db, userManager.Object, jwt);
 
-            controller.ControllerContext = new ControllerContext
+            ctrl.ControllerContext = new ControllerContext
             {
                 HttpContext = FakeHttpContextWithClaim("portfolioUserId", "55")
             };
 
-            var result = await controller.GetMyProfile();
+            var result = await ctrl.GetMyProfile();
 
             var ok = Assert.IsType<OkObjectResult>(result);
             var dto = Assert.IsType<PortfolioUserDto>(ok.Value);
@@ -259,62 +298,39 @@ namespace SkillSnap_API_Test.Controllers
             Assert.Equal("Self", dto.Name);
         }
 
-        // -----------------------------------------------------------
-        // LINK PORTFOLIO USER
-        // -----------------------------------------------------------
+        // ----------------------------------------------------------------------
+        // TESTS: LINK PORTFOLIO USER
+        // ----------------------------------------------------------------------
         [Fact]
         public async Task LinkPortfolioUser_LinksSuccessfully()
         {
             var db = CreateDbContext();
 
-            var portfolioUser = new PortfolioUser { Id = 88, Name = "PU", Bio = "", ProfileImageUrl = "" };
-            db.PortfolioUsers.Add(portfolioUser);
-
-            var appUser = new ApplicationUser { Id = "app123", Email = "test@test.com" };
-            db.Users.Add(appUser);
-
+            db.PortfolioUsers.Add(new PortfolioUser { Id = 88, Name = "PU", Bio = "", ProfileImageUrl = "" });
+            db.Users.Add(new ApplicationUser { Id = "app123", Email = "test@test.com" });
             await db.SaveChangesAsync();
 
-            // Create a real JwtTokenService configured with a test signing key so we can exercise token generation.
-            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
-            mockConfig.Setup(c => c["Jwt:Key"]).Returns(new string('x', 32));
-            mockConfig.Setup(c => c["Jwt:Issuer"]).Returns("test");
-            mockConfig.Setup(c => c["Jwt:Audience"]).Returns("test");
-            mockConfig.Setup(c => c["Jwt:ExpiresInMinutes"]).Returns("60");
-
             var userManager = CreateUserManagerMock();
-            userManager.Setup(m => m.FindByIdAsync("app123")).ReturnsAsync(appUser);
-            userManager.Setup(m => m.UpdateAsync(appUser)).ReturnsAsync(IdentityResult.Success);
+            userManager.Setup(m => m.FindByIdAsync("app123")).ReturnsAsync(db.Users.Single());
+            userManager.Setup(m => m.UpdateAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(IdentityResult.Success);
             userManager.Setup(m => m.GetRolesAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<string>());
 
-            var jwtService = new JwtTokenService(mockConfig.Object, userManager.Object);
+            var jwt = CreateRealJwtService(userManager.Object);
 
-            var controller = new PortfolioUserController(db, userManager.Object, jwtService);
+            var ctrl = new PortfolioUserController(db, userManager.Object, jwt);
 
-            controller.ControllerContext = new ControllerContext
+            ctrl.ControllerContext = new ControllerContext
             {
                 HttpContext = FakeHttpContextWithClaim(ClaimTypes.NameIdentifier, "app123")
             };
 
-            var result = await controller.LinkPortfolioUser(88);
+            var result = await ctrl.LinkPortfolioUser(88);
 
             var ok = Assert.IsType<OkObjectResult>(result);
-            var response = Assert.IsType<LinkPortfolioUserResponseDto>(ok.Value);
+            var dto = Assert.IsType<LinkPortfolioUserResponseDto>(ok.Value);
 
-            Assert.False(string.IsNullOrWhiteSpace(response.Token));
-            Assert.Equal(88, response.PortfolioUserId);
-        }
-
-        // -----------------------------------------------------------
-        // Helpers
-        // -----------------------------------------------------------
-        private static Microsoft.AspNetCore.Http.HttpContext FakeHttpContextWithClaim(string type, string value)
-        {
-            var context = new DefaultHttpContext();
-            context.User = new ClaimsPrincipal(
-                new ClaimsIdentity(new List<Claim> { new Claim(type, value) })
-            );
-            return context;
+            Assert.Equal(88, dto.PortfolioUserId);
+            Assert.False(string.IsNullOrWhiteSpace(dto.Token));
         }
     }
 }
